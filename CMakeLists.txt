@@ -1,11 +1,12 @@
-cmake_minimum_required(VERSION 4.0)
-project(Weather_Station)
+cmake_minimum_required(VERSION 3.20)
+
+project(Weather_Station LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-include_directories(include)
-
-add_executable(Weather_Station
+set(SOURCES
         src/main.cpp
         src/controller/WeatherStationController.cpp
         src/publisher/MosquittoAdapter.cpp
@@ -15,3 +16,6 @@ add_executable(Weather_Station
         src/sensors/SHT41Sensor.cpp
 )
 
+add_executable(Weather_Station ${SOURCES})
+
+target_include_directories(Weather_Station PRIVATE include)
