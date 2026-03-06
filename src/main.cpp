@@ -1,6 +1,9 @@
-#include <iostream>
+#include <Arduino.h>
 
-int main() {
-    std::cout << "Hello, World!" << std::endl;
-    return 0;
+void setup() {
+    // initialization
+}
+
+void loop() {
+    // main app loop
 }
