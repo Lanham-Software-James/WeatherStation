@@ -11,13 +11,9 @@
 .vscode/ipch/
 
 # =========================
-# CLion / JetBrains
+# VSCode settings
 # =========================
-.idea/
-cmake-build-*/
-CMakeFiles/
-CMakeCache.txt
-compile_commands.json
+.vscode/
 
 # =========================
 # OS files
