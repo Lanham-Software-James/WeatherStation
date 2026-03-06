@@ -1,0 +1,71 @@
+# =========================
+# Build output
+# =========================
+.pio/
+.build/
+
+# =========================
+# PlatformIO temporary files
+# =========================
+.vscode/.browse.c_cpp.db*
+.vscode/ipch/
+
+# =========================
+# CLion / JetBrains
+# =========================
+.idea/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Temporary / backup files
+# =========================
+*.tmp
+*.swp
+*.bak
+
+# =========================
+# Python cache (sometimes used in tooling)
+# =========================
+__pycache__/
+
+# =========================
+# Serial monitor logs
+# =========================
+*.monitor
+
+# =========================
+# Environment variables / secrets
+# =========================
+.env
+.env.local
+secrets.h
+
+# =========================
+# PlatformIO library build artifacts
+# =========================
+libdeps/
+
+# =========================
+# Test build artifacts
+# =========================
+test/.pio/
+
+# =========================
+# macOS Finder
+# =========================
+.AppleDouble
+.LSOverride
