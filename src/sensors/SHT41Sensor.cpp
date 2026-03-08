@@ -1,5 +1,3 @@
-#include <Arduino.h>
-
 #include "sensors/SHT41Sensor.h"
 
 namespace
@@ -36,15 +34,5 @@ bool SHT41Sensor::onRead(Observation& observation)
     observation.temperature_c = temperature_c;
     observation.humidity_pct = humidity_pct;
 
-    logData(observation);
     return true;
-}
-
-void SHT41Sensor::logData(const Observation& observation)
-{
-    Serial.print("Logged Data - Temperature: ");
-    Serial.print(observation.temperature_c);
-    Serial.print(" C, Humidity: ");
-    Serial.print(observation.humidity_pct);
-    Serial.println(" %");
 }
