@@ -2,9 +2,12 @@
 
 #include "controller/WeatherStationController.h"
 #include "sensors/SHT41Sensor.h"
+#include "sensors/BMP280Sensor.h"
 
-SHT41Sensor sht41_sensor;
-WeatherStationController controller(&sht41_sensor);
+SHT41Sensor sht41;
+BMP280Sensor bmp280;
+
+WeatherStationController controller({&sht41, &bmp280});
 
 constexpr int BLUE_LED_PIN = 2;
 constexpr int RED_LED_PIN = 4;
