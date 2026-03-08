@@ -3,10 +3,9 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-namespace
+BMP280Sensor::BMP280Sensor(const SensorConfig& config)
+    : config_(config)
 {
-    constexpr int SDA_PIN = 21;
-    constexpr int SCL_PIN = 22;
 }
 
 std::string BMP280Sensor::getName() const
@@ -14,23 +13,22 @@ std::string BMP280Sensor::getName() const
     return "BMP280";
 }
 
+std::string BMP280Sensor::getId() const
+{
+    return config_.id;
+}
+
 bool BMP280Sensor::onInitialize()
 {
-    Wire.begin(SDA_PIN, SCL_PIN);
-
-    // Try the most common default first, then the alternate.
-    if (bmp280_.begin(BMP280_ADDRESS))
+    if (config_.i2c_address != BMP280_ADDRESS && config_.i2c_address != BMP280_ADDRESS_ALT)
     {
-        
-        return true;
+        return false;
     }
 
-    if (bmp280_.begin(BMP280_ADDRESS_ALT))
-    {
-        return true;
-    }
+    Wire.begin(config_.sda_pin, config_.scl_pin);
+    bmp280_.begin(config_.i2c_address);
 
-    return false;
+    return true;
 }
 
 bool BMP280Sensor::onRead(Observation& observation)
@@ -43,7 +41,7 @@ bool BMP280Sensor::onRead(Observation& observation)
         return false;
     }
 
-    observation.pressure_hpa = pressure_pa / 100.0f;
+    observation.pressure_hpa = (pressure_pa / 100.0f) + config_.pressure_offset_hpa;
 
     return true;
 }

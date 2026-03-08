@@ -3,11 +3,16 @@
 #include "controller/WeatherStationController.h"
 #include "sensors/SHT41Sensor.h"
 #include "sensors/BMP280Sensor.h"
+#include "config/ConfigLoader.h"
+#include "sensors/SensorFactory.h"
 
-SHT41Sensor sht41;
-BMP280Sensor bmp280;
+ConfigLoader config_loader;
+StationConfig station_config = config_loader.load();
 
-WeatherStationController controller({&sht41, &bmp280});
+SensorFactory sensor_factory;
+std::vector<Sensor*> sensors = sensor_factory.createSensors(station_config);
+
+WeatherStationController controller(station_config.station_id, std::move(sensors));
 
 constexpr int BLUE_LED_PIN = 2;
 constexpr int RED_LED_PIN = 4;
