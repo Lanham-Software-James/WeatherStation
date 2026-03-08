@@ -6,7 +6,7 @@ TEST_CASE("ConfigLoader returns default station config")
     ConfigLoader loader;
     StationConfig config = loader.load();
 
-    CHECK(config.station_id == "home_ref");
+    CHECK(config.station_id == "station_001");
     REQUIRE(config.sensors.size() == 2);
 
     CHECK(config.sensors[0].type == SensorType::SHT41);

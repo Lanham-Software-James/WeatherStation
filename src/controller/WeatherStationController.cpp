@@ -49,12 +49,12 @@ void WeatherStationController::tick()
     Serial.print("Station ID: ");
     Serial.print(station_id_.c_str());
 
-    Serial.print("Temp: ");
+    Serial.print("\tTemp: ");
     Serial.print(obs.temperature_c);
 
-    Serial.print("  Humidity: ");
+    Serial.print("\tHumidity: ");
     Serial.print(obs.humidity_pct);
 
-    Serial.print("  Pressure: ");
+    Serial.print("\tPressure: ");
     Serial.println(obs.pressure_hpa);
 }

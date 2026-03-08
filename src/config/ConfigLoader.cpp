@@ -3,7 +3,7 @@
 StationConfig ConfigLoader::load() const
 {
     StationConfig config{};
-    config.station_id = "home_ref";
+    config.station_id = "station_001";
 
     SensorConfig sht41_config{};
     sht41_config.type = SensorType::SHT41;
