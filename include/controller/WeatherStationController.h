@@ -1,16 +1,18 @@
 #pragma once
 
+#include <vector>
+
 #include "model/Observation.h"
 #include "sensors/Sensor.h"
 
 class WeatherStationController
 {
     public:
-        explicit WeatherStationController(Sensor* sensor);
+        explicit WeatherStationController(std::vector<Sensor*> sensors);
 
         bool initialize();
-        bool tick();
+        void tick();
 
     private:
-        Sensor* sensor_;
+        std::vector<Sensor*> sensors_;
 };

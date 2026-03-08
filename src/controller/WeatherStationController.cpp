@@ -2,58 +2,57 @@
 
 #include "controller/WeatherStationController.h"
 
-WeatherStationController::WeatherStationController(Sensor* sensor)
-    : sensor_(sensor)
+WeatherStationController::WeatherStationController(std::vector<Sensor*> sensors)
+    : sensors_(std::move(sensors))
 {
 }
 
 bool WeatherStationController::initialize()
 {
-    if (sensor_ == nullptr)
+    if (sensors_.empty())
     {
-        Serial.println("Controller init failed: sensor is null.");
+        Serial.println("Controller init failed: no sensors configured.");
         return false;
     }
 
-    const bool success = sensor_->initialize();
-
-    if (success)
+    for (Sensor* sensor : sensors_)
     {
-        Serial.println("Controller initialized successfully.");
-    }
-    else
-    {
-        Serial.println("Controller init failed: sensor initialization failed.");
+        if (sensor == nullptr)
+        {
+            Serial.println("Controller init failed: null sensor.");
+            return false;
+        }
+
+        Serial.print("Initializing sensor: ");
+        Serial.println(sensor->getName().c_str());
+
+        if (!sensor->initialize())
+        {
+            Serial.print("Failed to initialize sensor: ");
+            Serial.println(sensor->getName().c_str());
+            return false;
+        }
     }
 
-    return success;
+    Serial.println("Controller initialized successfully.");
+    return true;
 }
 
-bool WeatherStationController::tick()
+void WeatherStationController::tick()
 {
-    if (sensor_ == nullptr)
+    Observation obs;
+
+    for (Sensor* sensor : sensors_)
     {
-        Serial.println("Tick failed: sensor is null.");
-        return false;
+        sensor->read(obs);
     }
 
-    Observation observation{};
+    Serial.print("Temp: ");
+    Serial.print(obs.temperature_c);
 
-    const bool success = sensor_->read(observation);
+    Serial.print("  Humidity: ");
+    Serial.print(obs.humidity_pct);
 
-    if (!success)
-    {
-        Serial.println("Tick failed: sensor read failed.");
-        return false;
-    }
-
-    Serial.print("Temperature: ");
-    Serial.print(observation.temperature_c);
-    Serial.println(" C");
-
-    Serial.print("Humidity: ");
-    Serial.print(observation.humidity_pct);
-    Serial.println(" %");
-
-    return true;
+    Serial.print("  Pressure: ");
+    Serial.println(obs.pressure_hpa);
 }
