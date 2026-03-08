@@ -2,8 +2,8 @@
 
 #include "controller/WeatherStationController.h"
 
-WeatherStationController::WeatherStationController(std::vector<Sensor*> sensors)
-    : sensors_(std::move(sensors))
+WeatherStationController::WeatherStationController(std::string station_id, std::vector<Sensor*> sensors)
+    : station_id_(station_id), sensors_(std::move(sensors))
 {
 }
 
@@ -46,6 +46,8 @@ void WeatherStationController::tick()
     {
         sensor->read(obs);
     }
+    Serial.print("Station ID: ");
+    Serial.print(station_id_.c_str());
 
     Serial.print("Temp: ");
     Serial.print(obs.temperature_c);

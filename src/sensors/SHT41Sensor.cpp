@@ -1,20 +1,29 @@
 #include "sensors/SHT41Sensor.h"
 
-namespace
+SHT41Sensor::SHT41Sensor(const SensorConfig& config)
+    : config_(config)
 {
-    constexpr int SDA_PIN = 21;
-    constexpr int SCL_PIN = 22;
 }
 
 std::string SHT41Sensor::getName() const
 {
-    return "SHT41";
+    return "SHT41Sensor";
+}
+
+std::string SHT41Sensor::getId() const
+{
+    return config_.id;
 }
 
 bool SHT41Sensor::onInitialize()
 {
-    Wire.begin(SDA_PIN, SCL_PIN);
-    sht4x_.begin(Wire, SHT41_I2C_ADDR_44);
+    if (config_.i2c_address != SHT41_I2C_ADDR_44 && config_.i2c_address != SHT41_I2C_ADDR_45)
+    {
+        return false;
+    }
+
+    Wire.begin(config_.sda_pin, config_.scl_pin);
+    sht4x_.begin(Wire, config_.i2c_address);
 
     return true;
 }
@@ -31,8 +40,8 @@ bool SHT41Sensor::onRead(Observation& observation)
         return false;
     }
 
-    observation.temperature_c = temperature_c;
-    observation.humidity_pct = humidity_pct;
+    observation.temperature_c = temperature_c + config_.temperature_offset_c;
+    observation.humidity_pct = humidity_pct + config_.humidity_offset_pct;
 
     return true;
 }
