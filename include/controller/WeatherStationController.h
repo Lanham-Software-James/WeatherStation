@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vector>
+#include <string>
+#include <cstdint>
 
 #include "model/Observation.h"
 #include "sensors/Sensor.h"
@@ -11,9 +13,11 @@ class WeatherStationController
         explicit WeatherStationController(std::string station_id, std::vector<Sensor*> sensors);
 
         bool initialize();
-        void tick();
+        bool tick();
 
     private:
-        std::vector<Sensor*> sensors_;
         std::string station_id_;
+        std::vector<Sensor*> sensors_;
+
+        std::int32_t sequence_number_{0};
 };
