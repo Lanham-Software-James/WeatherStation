@@ -1,23 +1,23 @@
 #pragma once
 
-#include <vector>
-#include <string>
 #include <cstdint>
+#include <vector>
 
 #include "model/Observation.h"
+#include "publisher/Publisher.h"
 #include "sensors/Sensor.h"
 
 class WeatherStationController
 {
-    public:
-        explicit WeatherStationController(const char* station_id, std::vector<Sensor*> sensors);
+public:
+    WeatherStationController(const char* station_id, std::vector<Sensor*> sensors, std::vector<Publisher*> publishers);
 
-        bool initialize();
-        bool tick();
+    bool initialize();
+    bool tick();
 
-    private:
-        const char* station_id_;
-        std::vector<Sensor*> sensors_;
-
-        std::int32_t sequence_number_{0};
+private:
+    const char* station_id_;
+    std::vector<Sensor*> sensors_;
+    std::vector<Publisher*> publishers_;
+    std::uint32_t sequence_number_{0};
 };
