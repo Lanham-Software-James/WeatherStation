@@ -72,7 +72,7 @@ void initializeLEDs()
 
 void connectWifi()
 {
-    WiFi.begin(NETWORK_CONFIG.WIFI_SSID.c_str(), NETWORK_CONFIG.WIFI_PASSWORD.c_str());
+    WiFi.begin(NETWORK_CONFIG.WIFI_SSID, NETWORK_CONFIG.WIFI_PASSWORD);
 
     Serial.print("Connecting to WiFi");
 

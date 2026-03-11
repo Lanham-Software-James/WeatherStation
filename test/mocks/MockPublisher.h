@@ -16,7 +16,7 @@ class FakePublisher : public Publisher
 
         Observation last_observation{};
 
-        [[nodiscard]] std::string getName() const override
+        [[nodiscard]] char* getName() const override
         {
             return "FakePublisher";
         }

@@ -6,7 +6,7 @@
 
 struct Observation
 {
-    std::string station_id{"default_station"};
+    const char* station_id{"default_station"};
     std::uint32_t sequence_number{0};
 
     float pressure_hpa{0.0f};
