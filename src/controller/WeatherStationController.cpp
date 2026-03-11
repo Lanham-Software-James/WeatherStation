@@ -72,7 +72,7 @@ bool WeatherStationController::tick()
     Serial.println(obs.pressure_hpa);
 
     Serial.print("Timestamp (UTC): ");
-    Serial.println(obs.timestamp_utc);
+    Serial.println(localtime(&obs.timestamp_utc), "%Y-%m-%d %H:%M:%S");
 
     Serial.println("-----------------------------");
 
