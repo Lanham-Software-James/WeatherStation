@@ -1,42 +1,38 @@
 #include <Arduino.h>
+#include <WiFi.h>
+#include <time.h>
+#include <vector>
 
 #include "controller/WeatherStationController.h"
-#include "sensors/SHT41Sensor.h"
-#include "sensors/BMP280Sensor.h"
 #include "config/ConfigLoader.h"
 #include "sensors/SensorFactory.h"
+#include "config/Config.local.h"
 
-ConfigLoader config_loader;
-StationConfig station_config = config_loader.load();
-
-SensorFactory sensor_factory;
-std::vector<Sensor*> sensors = sensor_factory.createSensors(station_config);
-
-WeatherStationController controller(station_config.station_id, std::move(sensors));
+void initializeLEDs();
+void connectWifi();
+void syncTime();
+bool initializeController();
 
 constexpr int BLUE_LED_PIN = 2;
 constexpr int RED_LED_PIN = 4;
 constexpr int SERIAL_BAUD_RATE = 115200;
-constexpr int BOOT_DELAY_MS = 2000;
+constexpr int BOOT_DELAY_MS = 200;
 constexpr int TICK_INTERVAL_MS = 2000;
+
+WeatherStationController* controller = nullptr;
 
 void setup()
 {
-    pinMode(RED_LED_PIN, OUTPUT);
-    pinMode(BLUE_LED_PIN, OUTPUT);
-
-    digitalWrite(RED_LED_PIN, HIGH);
-    digitalWrite(BLUE_LED_PIN, LOW);
+    initializeLEDs();
 
     Serial.begin(SERIAL_BAUD_RATE);
-
-    Serial.println("Booting weather station...");
-    
     delay(BOOT_DELAY_MS);
 
-    if (!controller.initialize())
+    connectWifi();
+    syncTime();
+
+    if (!initializeController())
     {
-        Serial.println("Controller failed to initialize.");
         while (true)
         {
             digitalWrite(RED_LED_PIN, HIGH);
@@ -44,10 +40,6 @@ void setup()
             digitalWrite(RED_LED_PIN, LOW);
             delay(300);
         }
-    } else {
-        Serial.println("Controller initialized successfully.");
-        digitalWrite(RED_LED_PIN, LOW);
-        digitalWrite(BLUE_LED_PIN, HIGH);  
     }
 }
 
@@ -55,7 +47,7 @@ void loop()
 {
     static int failure_count = 0;
 
-    if (!controller.tick())
+    if (controller == nullptr || !controller->tick())
     {
         failure_count++;
         Serial.print("Tick failure count: ");
@@ -66,6 +58,80 @@ void loop()
     }
 
     failure_count = 0;
-
     delay(TICK_INTERVAL_MS);
+}
+
+void initializeLEDs()
+{
+    pinMode(RED_LED_PIN, OUTPUT);
+    pinMode(BLUE_LED_PIN, OUTPUT);
+
+    digitalWrite(RED_LED_PIN, HIGH);
+    digitalWrite(BLUE_LED_PIN, LOW);
+}
+
+void connectWifi()
+{
+    WiFi.begin(CONFIG.WIFI_SSID.c_str(), CONFIG.WIFI_PASSWORD.c_str());
+
+    Serial.print("Connecting to WiFi");
+
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(500);
+        Serial.print(".");
+    }
+
+    Serial.println();
+    Serial.println("WiFi connected");
+}
+
+void syncTime()
+{
+    const char* ntpServer = "pool.ntp.org";
+    const long gmtOffset_sec = 0;
+    const int daylightOffset_sec = 0;
+
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+
+    Serial.print("Waiting for NTP time");
+
+    time_t now = time(nullptr);
+
+    while (now < 100000)
+    {
+        delay(500);
+        Serial.print(".");
+        now = time(nullptr);
+    }
+
+    Serial.println();
+    Serial.println("Time synchronized");
+}
+
+bool initializeController()
+{
+    Serial.println("Booting weather station...");
+
+    ConfigLoader config_loader;
+    StationConfig station_config = config_loader.load();
+
+    SensorFactory sensor_factory;
+    std::vector<Sensor*> sensors = sensor_factory.createSensors(station_config);
+
+    controller = new WeatherStationController(
+        station_config.station_id,
+        std::move(sensors)
+    );
+
+    if (!controller->initialize())
+    {
+        Serial.println("Controller failed to initialize.");
+        return false;
+    }
+
+    Serial.println("Controller initialized successfully.");
+    digitalWrite(RED_LED_PIN, LOW);
+    digitalWrite(BLUE_LED_PIN, HIGH);
+    return true;
 }
