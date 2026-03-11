@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 #include "publisher/Publisher.h"
 #include "model/Observation.h"
 

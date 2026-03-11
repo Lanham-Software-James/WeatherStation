@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 #include "sensors/Sensor.h"
 
 class FakeSensor : public Sensor
