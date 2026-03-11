@@ -8,12 +8,12 @@ BMP280Sensor::BMP280Sensor(const SensorConfig& config)
 {
 }
 
-std::string BMP280Sensor::getName() const
+const char* BMP280Sensor::getName() const
 {
     return "BMP280";
 }
 
-std::string BMP280Sensor::getId() const
+const char* BMP280Sensor::getId() const
 {
     return config_.id;
 }

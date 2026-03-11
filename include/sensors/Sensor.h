@@ -12,8 +12,8 @@ class Sensor {
         bool read(Observation& observation);
         [[nodiscard]] bool isInitialized() const noexcept;
 
-        [[nodiscard]] virtual std::string getName() const = 0;
-        [[nodiscard]] virtual std::string getId() const = 0;
+        [[nodiscard]] virtual const char* getName() const = 0;
+        [[nodiscard]] virtual const char* getId() const = 0;
 
     protected:
         virtual bool onInitialize() = 0;

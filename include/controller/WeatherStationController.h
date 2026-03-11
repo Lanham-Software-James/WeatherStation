@@ -10,13 +10,13 @@
 class WeatherStationController
 {
     public:
-        explicit WeatherStationController(std::string station_id, std::vector<Sensor*> sensors);
+        explicit WeatherStationController(const char* station_id, std::vector<Sensor*> sensors);
 
         bool initialize();
         bool tick();
 
     private:
-        std::string station_id_;
+        const char* station_id_;
         std::vector<Sensor*> sensors_;
 
         std::int32_t sequence_number_{0};

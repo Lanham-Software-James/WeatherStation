@@ -3,8 +3,8 @@
 
 #include "controller/WeatherStationController.h"
 
-WeatherStationController::WeatherStationController(std::string station_id, std::vector<Sensor*> sensors)
-    : station_id_(std::move(station_id)), sensors_(std::move(sensors))
+WeatherStationController::WeatherStationController(const char* station_id, std::vector<Sensor*> sensors)
+    : station_id_(station_id), sensors_(sensors)
 {
 }
 
@@ -25,12 +25,12 @@ bool WeatherStationController::initialize()
         }
 
         Serial.print("Initializing sensor: ");
-        Serial.println(sensor->getName().c_str());
+        Serial.println(sensor->getName());
 
         if (!sensor->initialize())
         {
             Serial.print("Failed to initialize sensor: ");
-            Serial.println(sensor->getName().c_str());
+            Serial.println(sensor->getName());
             return false;
         }
     }
@@ -51,13 +51,13 @@ bool WeatherStationController::tick()
         if (!sensor->read(obs))
         {
             Serial.print("Failed to read sensor: ");
-            Serial.println(sensor->getName().c_str());
+            Serial.println(sensor->getName());
             return false;
         }
     }
 
     Serial.print("Station ID: ");
-    Serial.println(obs.station_id.c_str());
+    Serial.println(obs.station_id);
 
     Serial.print("Sequence Number: ");
     Serial.println(obs.sequence_number);
@@ -72,7 +72,7 @@ bool WeatherStationController::tick()
     Serial.println(obs.pressure_hpa);
 
     Serial.print("Timestamp (UTC): ");
-    Serial.println(obs.timestamp_utc);
+    Serial.println(localtime(&obs.timestamp_utc), "%Y-%m-%d %H:%M:%S");
 
     Serial.println("-----------------------------");
 

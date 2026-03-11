@@ -11,8 +11,8 @@ class SHT41Sensor : public Sensor
     public:
         explicit SHT41Sensor(const SensorConfig& config);
 
-        [[nodiscard]] std::string getName() const override;
-        [[nodiscard]] std::string getId() const override;
+        [[nodiscard]] const char* getName() const override;
+        [[nodiscard]] const char* getId() const override;
 
     protected:
         bool onInitialize() override;

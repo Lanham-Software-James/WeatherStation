@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "doctest.h"
 #include "config/ConfigLoader.h"
 
@@ -6,7 +8,7 @@ TEST_CASE("ConfigLoader returns default station config")
     ConfigLoader loader;
     StationConfig config = loader.load();
 
-    CHECK(config.station_id == "station_001");
+    CHECK(std::strcmp(config.station_id, "station_001") == 0);
     REQUIRE(config.sensors.size() == 2);
 
     CHECK(config.sensors[0].type == SensorType::SHT41);

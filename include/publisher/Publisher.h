@@ -13,7 +13,7 @@ class Publisher
         bool publish(const Observation& observation);
         [[nodiscard]] bool isInitialized() const;
 
-        [[nodiscard]] virtual std::string getName() const = 0;
+        [[nodiscard]] virtual const char* getName() const = 0;
 
     protected:
         virtual bool onInitialize() = 0;

@@ -5,12 +5,12 @@ SHT41Sensor::SHT41Sensor(const SensorConfig& config)
 {
 }
 
-std::string SHT41Sensor::getName() const
+const char* SHT41Sensor::getName() const
 {
     return "SHT41Sensor";
 }
 
-std::string SHT41Sensor::getId() const
+const char* SHT41Sensor::getId() const
 {
     return config_.id;
 }

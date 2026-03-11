@@ -13,7 +13,7 @@ enum class SensorType
 struct SensorConfig
 {
     SensorType type;
-    std::string id;
+    const char* id;
     bool enabled{true};
     int sda_pin{21};
     int scl_pin{22};
@@ -26,6 +26,6 @@ struct SensorConfig
 
 struct StationConfig
 {
-    std::string station_id{"default_station"};
+    const char* station_id{"default_station"};
     std::vector<SensorConfig> sensors;
 };

@@ -17,12 +17,12 @@ class FakeSensor : public Sensor
         float humidity_to_write{50.0f};
         float pressure_to_write{1013.25f};
 
-        [[nodiscard]] std::string getName() const override
+        [[nodiscard]] const char* getName() const override
         {
             return "FakeSensor";
         }
 
-        [[nodiscard]] std::string getId() const override
+        [[nodiscard]] const char* getId() const override
         {
             return "fake_sensor_1";
         }
