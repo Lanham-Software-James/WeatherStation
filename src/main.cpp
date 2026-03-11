@@ -53,6 +53,19 @@ void setup()
 
 void loop()
 {
-    controller.tick();
+    static int failure_count = 0;
+
+    if (!controller.tick())
+    {
+        failure_count++;
+        Serial.print("Tick failure count: ");
+        Serial.println(failure_count);
+
+        delay(2000);
+        return;
+    }
+
+    failure_count = 0;
+
     delay(TICK_INTERVAL_MS);
 }

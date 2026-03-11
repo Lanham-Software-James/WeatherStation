@@ -1,9 +1,10 @@
 #include <Arduino.h>
+#include <ctime>
 
 #include "controller/WeatherStationController.h"
 
 WeatherStationController::WeatherStationController(std::string station_id, std::vector<Sensor*> sensors)
-    : station_id_(station_id), sensors_(std::move(sensors))
+    : station_id_(std::move(station_id)), sensors_(std::move(sensors))
 {
 }
 
@@ -38,23 +39,42 @@ bool WeatherStationController::initialize()
     return true;
 }
 
-void WeatherStationController::tick()
+bool WeatherStationController::tick()
 {
-    Observation obs;
+    Observation obs{};
+    obs.station_id = station_id_;
+    obs.sequence_number = sequence_number_++;
+    obs.timestamp_utc = std::time(nullptr);
 
     for (Sensor* sensor : sensors_)
     {
-        sensor->read(obs);
+        if (!sensor->read(obs))
+        {
+            Serial.print("Failed to read sensor: ");
+            Serial.println(sensor->getName().c_str());
+            return false;
+        }
     }
+
     Serial.print("Station ID: ");
-    Serial.print(station_id_.c_str());
+    Serial.println(obs.station_id.c_str());
 
-    Serial.print("\t\tTemp: ");
-    Serial.print(obs.temperature_c);
+    Serial.print("Sequence Number: ");
+    Serial.println(obs.sequence_number);
 
-    Serial.print("\tHumidity: ");
-    Serial.print(obs.humidity_pct);
+    Serial.print("Temperature: ");
+    Serial.println(obs.temperature_c);
 
-    Serial.print("\t\tPressure: ");
+    Serial.print("Humidity: ");
+    Serial.println(obs.humidity_pct);
+
+    Serial.print("Pressure: ");
     Serial.println(obs.pressure_hpa);
+
+    Serial.print("Timestamp (UTC): ");
+    Serial.println(obs.timestamp_utc);
+
+    Serial.println("-----------------------------");
+
+    return true;
 }
