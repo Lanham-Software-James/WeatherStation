@@ -6,7 +6,7 @@
 #include "controller/WeatherStationController.h"
 #include "config/ConfigLoader.h"
 #include "sensors/SensorFactory.h"
-#include "config/Config.local.h"
+#include "config/Secrets.h"
 
 void initializeLEDs();
 void connectWifi();
@@ -72,7 +72,7 @@ void initializeLEDs()
 
 void connectWifi()
 {
-    WiFi.begin(CONFIG.WIFI_SSID.c_str(), CONFIG.WIFI_PASSWORD.c_str());
+    WiFi.begin(NETWORK_CONFIG.WIFI_SSID.c_str(), NETWORK_CONFIG.WIFI_PASSWORD.c_str());
 
     Serial.print("Connecting to WiFi");
 

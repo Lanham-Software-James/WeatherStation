@@ -2,10 +2,8 @@
 
 #include <string>
 
-struct Config
+struct NetworkConfig
 {
     std::string WIFI_SSID = "CHANGE_ME";
     std::string WIFI_PASSWORD = "CHANGE_ME";
 };
-
-extern Config CONFIG;
