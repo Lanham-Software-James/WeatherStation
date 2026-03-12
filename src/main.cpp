@@ -7,7 +7,7 @@
 #include "config/ConfigLoader.h"
 #include "sensors/SensorFactory.h"
 #include "config/Secrets.h"
-#include "publisher/HTTPPublisher.h"
+#include "publisher/HttpPublisher.h"
 
 void initializeLEDs();
 void connectWifi();
@@ -120,7 +120,7 @@ bool initializeController()
     SensorFactory sensor_factory;
     std::vector<Sensor*> sensors = sensor_factory.createSensors(station_config);
 
-    HTTPPublisher publisher(HTTP_CONFIG.HTTP_ENDPOINT);
+    HttpPublisher publisher(HTTP_CONFIG.HTTP_ENDPOINT);
 
     controller = new WeatherStationController(
         station_config.station_id,
