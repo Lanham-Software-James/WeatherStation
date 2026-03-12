@@ -1,5 +1,7 @@
 #include "doctest.h"
 
+#include <string>
+
 #include "config/StationConfig.h"
 #include "sensors/SensorFactory.h"
 #include "../test/mocks/MockConstructedSensor.h"
