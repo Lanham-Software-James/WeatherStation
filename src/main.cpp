@@ -8,6 +8,9 @@
 #include "sensors/SensorFactory.h"
 #include "config/Secrets.h"
 #include "publisher/HttpPublisher.h"
+#include "publisher/adapters/WiFiNetworkStatus.h"
+#include "publisher/adapters/ArduinoHttpClientAdapter.h"
+#include "logging/SerialLogger.h"
 
 void initializeLEDs();
 void connectWifi();
@@ -119,8 +122,12 @@ bool initializeController()
 
     SensorFactory sensor_factory;
     std::vector<Sensor*> sensors = sensor_factory.createSensors(station_config);
+    
+    WiFiNetworkStatus network_status;
+    ArduinoHttpClientAdapter http_client;
+    SerialLogger logger;
 
-    HttpPublisher publisher(HTTP_CONFIG.HTTP_ENDPOINT);
+    HttpPublisher publisher(HTTP_CONFIG.HTTP_ENDPOINT, &network_status, &http_client, &logger);
 
     controller = new WeatherStationController(
         station_config.station_id,

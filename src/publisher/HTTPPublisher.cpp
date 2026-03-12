@@ -1,11 +1,15 @@
 #include "publisher/HttpPublisher.h"
+#include "serialization/ObservationSerializer.h"
 
-#include <Arduino.h>
-#include <HTTPClient.h>
-#include <WiFi.h>
-
-HttpPublisher::HttpPublisher(const char* endpoint_url)
-    : endpoint_url_(endpoint_url)
+HttpPublisher::HttpPublisher(
+    const char* endpoint_url,
+    NetworkStatus* network_status,
+    HttpClient* http_client,
+    Logger* logger)
+    : endpoint_url_(endpoint_url),
+      network_status_(network_status),
+      http_client_(http_client),
+      logger_(logger)
 {
 }
 
@@ -18,13 +22,30 @@ bool HttpPublisher::onInitialize()
 {
     if (endpoint_url_ == nullptr)
     {
-        Serial.println("HttpPublisher init failed: endpoint is null");
+        if (logger_ != nullptr) logger_->println("HttpPublisher init failed: endpoint is null");
         return false;
     }
 
-    if (WiFi.status() != WL_CONNECTED)
+    if (network_status_ == nullptr)
     {
-        Serial.println("HttpPublisher init failed: WiFi not connected");
+        if (logger_ != nullptr) logger_->println("HttpPublisher init failed: network status is null");
+        return false;
+    }
+
+    if (http_client_ == nullptr)
+    {
+        if (logger_ != nullptr) logger_->println("HttpPublisher init failed: HTTP client is null");
+        return false;
+    }
+
+    if (logger_ == nullptr)
+    {
+        return false;
+    }
+
+    if (!network_status_->isConnected())
+    {
+        if (logger_ != nullptr) logger_->println("HttpPublisher init failed: network not connected");
         return false;
     }
 
@@ -33,62 +54,42 @@ bool HttpPublisher::onInitialize()
 
 bool HttpPublisher::onPublish(const Observation& observation)
 {
-    if (WiFi.status() != WL_CONNECTED)
+    if (!network_status_->isConnected())
     {
-        Serial.println("HttpPublisher publish failed: WiFi disconnected");
+        if (logger_ != nullptr) logger_->println("HttpPublisher publish failed: network disconnected");
         return false;
     }
 
-    HTTPClient http;
-
-    if (!http.begin(endpoint_url_))
+    if (!http_client_->begin(endpoint_url_))
     {
-        Serial.println("HttpPublisher failed to begin HTTP connection");
+        if (logger_ != nullptr) logger_->println("HttpPublisher failed to begin HTTP connection");
         return false;
     }
 
-    http.addHeader("Content-Type", "application/json");
+    http_client_->addHeader("Content-Type", "application/json");
 
-    String payload = "{";
-    payload += "\"station_id\":\"";
-    payload += observation.station_id;
-    payload += "\",";
+    const char* payload = ObservationSerializer::toJson(observation);
+    const int response_code = http_client_->post(payload);
 
-    payload += "\"sequence_number\":";
-    payload += String(observation.sequence_number);
-    payload += ",";
-
-    payload += "\"timestamp_utc\":";
-    payload += String((unsigned long)observation.timestamp_utc);
-    payload += ",";
-
-    payload += "\"temperature_c\":";
-    payload += String(observation.temperature_c, 2);
-    payload += ",";
-
-    payload += "\"humidity_pct\":";
-    payload += String(observation.humidity_pct, 2);
-    payload += ",";
-
-    payload += "\"pressure_hpa\":";
-    payload += String(observation.pressure_hpa, 2);
-
-    payload += "}";
-
-    int response_code = http.POST(payload);
+     http_client_->end();
 
     if (response_code <= 0)
     {
-        Serial.print("HTTP POST failed: ");
-        Serial.println(response_code);
-        http.end();
+        if (logger_ != nullptr)
+        {
+            logger_->print("HTTP POST failed: ");
+            logger_->print(response_code);
+            logger_->println("");
+        }
         return false;
     }
 
-    Serial.print("HTTP response: ");
-    Serial.println(response_code);
-
-    http.end();
+    if (logger_ != nullptr)
+    {
+        logger_->print("HTTP response: ");
+        logger_->print(response_code);
+        logger_->println("");
+    }
 
     return response_code >= 200 && response_code < 300;
 }
