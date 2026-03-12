@@ -6,6 +6,8 @@
 #include "controller/WeatherStationController.h"
 #include "config/ConfigLoader.h"
 #include "sensors/SensorFactory.h"
+#include "sensors/SHT41Sensor.h"
+#include "sensors/BMP280Sensor.h"
 #include "config/Secrets.h"
 #include "publisher/HttpPublisher.h"
 #include "publisher/adapters/WiFiNetworkStatus.h"
@@ -121,7 +123,15 @@ bool initializeController()
     ConfigLoader config_loader;
     StationConfig station_config = config_loader.load();
 
-    SensorFactory sensor_factory;
+    SensorFactory sensor_factory(
+        [](const SensorConfig& config) -> Sensor* {
+            return new SHT41Sensor(config);
+        },
+        [](const SensorConfig& config) -> Sensor* {
+            return new BMP280Sensor(config);
+        }
+    );
+
     static std::vector<Sensor*> sensors = sensor_factory.createSensors(station_config);
     
     static WiFiNetworkStatus network_status;
