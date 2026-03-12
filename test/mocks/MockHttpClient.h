@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "publisher/network/HttpClient.h"
 
 class MockHttpClient : public HttpClient
@@ -14,9 +16,9 @@ public:
     bool end_called{false};
 
     const char* last_url{nullptr};
-    const char* last_header_name;
-    const char* last_header_value;
-    const char* last_payload;
+    const char* last_header_name{nullptr};
+    const char* last_header_value{nullptr};
+    std::string last_payload{};
 
     bool begin(const char* url) override
     {
@@ -35,7 +37,7 @@ public:
     int post(const char* payload) override
     {
         post_called = true;
-        last_payload = payload;
+        last_payload = (payload != nullptr) ? payload : "";
         return post_result;
     }
 
