@@ -10,7 +10,10 @@
 class WeatherStationController
 {
 public:
-    WeatherStationController(const char* station_id, std::vector<Sensor*> sensors, std::vector<Publisher*> publishers);
+    WeatherStationController(
+        const char* station_id,
+        const std::vector<Sensor*>& sensors,
+        const std::vector<Publisher*>& publishers);
 
     bool initialize();
     bool tick();

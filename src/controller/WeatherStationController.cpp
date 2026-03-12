@@ -3,8 +3,13 @@
 
 #include "controller/WeatherStationController.h"
 
-WeatherStationController::WeatherStationController(const char* station_id, std::vector<Sensor*> sensors, std::vector<Publisher*> publishers)
-    : station_id_(station_id), sensors_(std::move(sensors)), publishers_(std::move(publishers))
+WeatherStationController::WeatherStationController(
+    const char* station_id,
+    const std::vector<Sensor*>& sensors,
+    const std::vector<Publisher*>& publishers)
+    : station_id_(station_id),
+      sensors_(sensors),
+      publishers_(publishers)
 {
 }
 
