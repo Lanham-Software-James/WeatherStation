@@ -52,7 +52,7 @@ bool HttpPublisher::onInitialize()
     return true;
 }
 
-bool HttpPublisher::onPublish(const Observation& observation)
+bool HttpPublisher::onPublish(const ObservationBatch& batch)
 {
     if (!network_status_->isConnected())
     {
@@ -68,7 +68,7 @@ bool HttpPublisher::onPublish(const Observation& observation)
 
     http_client_->addHeader("Content-Type", "application/json");
 
-    const char* payload = ObservationSerializer::toJson(observation);
+    const char* payload = ObservationSerializer::toJson(batch);
     const int response_code = http_client_->post(payload);
 
      http_client_->end();

@@ -1,9 +1,9 @@
 #pragma once
 
+#include "model/ObservationBatch.h"
 #include "publisher/Publisher.h"
-#include "model/Observation.h"
 
-class FakePublisher : public Publisher
+class MockPublisher : public Publisher
 {
     public:
         bool initialize_result{true};
@@ -12,11 +12,11 @@ class FakePublisher : public Publisher
         bool on_initialize_called{false};
         bool on_publish_called{false};
 
-        Observation last_observation{};
+        ObservationBatch last_batch{};
 
         [[nodiscard]] const char* getName() const override
         {
-            return "FakePublisher";
+            return "MockPublisher";
         }
 
     protected:
@@ -26,7 +26,7 @@ class FakePublisher : public Publisher
             return initialize_result;
         }
 
-        bool onPublish(const Observation& observation) override
+        bool onPublish(const ObservationBatch& batch) override
         {
             on_publish_called = true;
 
@@ -35,7 +35,7 @@ class FakePublisher : public Publisher
                 return false;
             }
 
-            last_observation = observation;
+            last_batch = batch;
             return true;
         }
 };

@@ -19,7 +19,7 @@ public:
 
 protected:
     bool onInitialize() override;
-    bool onPublish(const Observation& observation) override;
+    bool onPublish(const ObservationBatch& batch) override;
 
 private:
     const char* endpoint_url_;

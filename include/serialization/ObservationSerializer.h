@@ -1,9 +1,9 @@
 #pragma once
 
-#include "model/Observation.h"
+#include "model/ObservationBatch.h"
 
 class ObservationSerializer
 {
     public:
-        [[nodiscard]] static const char* toJson(const Observation& observation);
+        [[nodiscard]] static const char* toJson(const ObservationBatch& batch);
 };

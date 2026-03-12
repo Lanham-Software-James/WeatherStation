@@ -2,7 +2,7 @@
 
 #include "sensors/Sensor.h"
 
-class FakeSensor : public Sensor
+class MockSensor : public Sensor
 {
     public:
         bool initialize_result{true};
@@ -17,12 +17,12 @@ class FakeSensor : public Sensor
 
         [[nodiscard]] const char* getName() const override
         {
-            return "FakeSensor";
+            return "MockSensor";
         }
 
         [[nodiscard]] const char* getId() const override
         {
-            return "fake_sensor_1";
+            return "mock_sensor_1";
         }
 
     protected:

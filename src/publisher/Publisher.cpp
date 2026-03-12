@@ -11,14 +11,14 @@ bool Publisher::initialize()
     return initialized_;
 }
 
-bool Publisher::publish(const Observation& observation)
+bool Publisher::publish(const ObservationBatch& batch)
 {
     if (!initialized_)
     {
         return false;
     }
 
-    return onPublish(observation);
+    return onPublish(batch);
 }
 
 bool Publisher::isInitialized() const

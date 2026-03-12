@@ -5,22 +5,22 @@
 
 TEST_CASE("Sensor starts uninitialized")
 {
-    FakeSensor sensor;
+    MockSensor sensor;
 
     CHECK(sensor.isInitialized() == false);
 }
 
 TEST_CASE("Sensor exposes expected name and id")
 {
-    FakeSensor sensor;
+    MockSensor sensor;
 
-    CHECK(sensor.getName() == "FakeSensor");
-    CHECK(sensor.getId() == "fake_sensor_1");
+    CHECK(sensor.getName() == "MockSensor");
+    CHECK(sensor.getId() == "mock_sensor_1");
 }
 
 TEST_CASE("Sensor read fails before initialization")
 {
-    FakeSensor sensor;
+    MockSensor sensor;
     Observation observation{};
 
     const bool result = sensor.read(observation);
@@ -32,7 +32,7 @@ TEST_CASE("Sensor read fails before initialization")
 
 TEST_CASE("Sensor initialize succeeds when onInitialize succeeds")
 {
-    FakeSensor sensor;
+    MockSensor sensor;
 
     const bool result = sensor.initialize();
 
@@ -43,7 +43,7 @@ TEST_CASE("Sensor initialize succeeds when onInitialize succeeds")
 
 TEST_CASE("Sensor initialize fails when onInitialize fails")
 {
-    FakeSensor sensor;
+    MockSensor sensor;
     sensor.initialize_result = false;
 
     const bool result = sensor.initialize();
@@ -55,7 +55,7 @@ TEST_CASE("Sensor initialize fails when onInitialize fails")
 
 TEST_CASE("Sensor read succeeds after successful initialization")
 {
-    FakeSensor sensor;
+    MockSensor sensor;
     Observation observation{};
 
     REQUIRE(sensor.initialize() == true);
@@ -71,7 +71,7 @@ TEST_CASE("Sensor read succeeds after successful initialization")
 
 TEST_CASE("Sensor read returns false when onRead fails")
 {
-    FakeSensor sensor;
+    MockSensor sensor;
     sensor.read_result = false;
     Observation observation{};
 
@@ -85,7 +85,7 @@ TEST_CASE("Sensor read returns false when onRead fails")
 
 TEST_CASE("Sensor initialize does not reinitialize once already initialized")
 {
-    FakeSensor sensor;
+    MockSensor sensor;
 
     REQUIRE(sensor.initialize() == true);
     sensor.on_initialize_called = false;

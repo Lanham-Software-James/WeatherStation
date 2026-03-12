@@ -4,6 +4,8 @@ StationConfig ConfigLoader::load() const
 {
     StationConfig config{};
     config.station_id = "station_001";
+    config.sample_interval_ms = 5000;
+    config.publish_interval_ms = 30000;
 
     SensorConfig sht41_config{};
     sht41_config.type = SensorType::SHT41;

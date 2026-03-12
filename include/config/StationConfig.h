@@ -26,5 +26,7 @@ struct SensorConfig
 struct StationConfig
 {
     const char* station_id{"default_station"};
+    unsigned long sample_interval_ms{10000};
+    unsigned long publish_interval_ms{60000};
     std::vector<SensorConfig> sensors;
 };

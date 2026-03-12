@@ -4,10 +4,40 @@
 #include <string>
 
 #include "model/Observation.h"
+#include "model/ObservationBatch.h"
 #include "publisher/HttpPublisher.h"
 #include "../test/mocks/MockHttpClient.h"
 #include "../test/mocks/MockNetworkStatus.h"
 #include "../test/mocks/MockLogger.h"
+
+namespace
+{
+    Observation makeObservation(
+        const char* station_id,
+        std::time_t ts,
+        float temperature_c,
+        float humidity_pct,
+        float pressure_hpa)
+    {
+        Observation observation{};
+        observation.station_id = station_id;
+        observation.timestamp_utc = ts;
+        observation.temperature_c = temperature_c;
+        observation.humidity_pct = humidity_pct;
+        observation.pressure_hpa = pressure_hpa;
+        return observation;
+    }
+
+    ObservationBatch makeBatch()
+    {
+        ObservationBatch batch{};
+        batch.station_id = "home_ref";
+        batch.sent_at = 1700000060;
+        batch.samples.push_back(makeObservation("home_ref", 1700000000, 21.52f, 48.10f, 1012.32f));
+        batch.samples.push_back(makeObservation("home_ref", 1700000010, 21.60f, 48.00f, 1012.28f));
+        return batch;
+    }
+}
 
 TEST_CASE("HttpPublisher returns correct name")
 {
@@ -98,10 +128,9 @@ TEST_CASE("HttpPublisher publish fails before initialization")
 
     HttpPublisher publisher("https://example.com", &network_status, &http_client, &logger);
 
-    Observation observation{};
-    observation.station_id = "home_ref";
+    ObservationBatch batch = makeBatch();
 
-    CHECK(publisher.publish(observation) == false);
+    CHECK(publisher.publish(batch) == false);
 }
 
 TEST_CASE("HttpPublisher publish fails when network is disconnected")
@@ -116,10 +145,9 @@ TEST_CASE("HttpPublisher publish fails when network is disconnected")
 
     network_status.connected = false;
 
-    Observation observation{};
-    observation.station_id = "home_ref";
+    ObservationBatch batch = makeBatch();
 
-    CHECK(publisher.publish(observation) == false);
+    CHECK(publisher.publish(batch) == false);
     CHECK(http_client.begin_called == false);
     CHECK(http_client.post_called == false);
     CHECK(http_client.end_called == false);
@@ -136,15 +164,9 @@ TEST_CASE("HttpPublisher publish fails when HTTP begin fails")
 
     REQUIRE(publisher.initialize() == true);
 
-    Observation observation{};
-    observation.station_id = "home_ref";
-    observation.sequence_number = 1;
-    observation.timestamp_utc = 1000;
-    observation.temperature_c = 20.0f;
-    observation.humidity_pct = 50.0f;
-    observation.pressure_hpa = 1013.25f;
+    ObservationBatch batch = makeBatch();
 
-    CHECK(publisher.publish(observation) == false);
+    CHECK(publisher.publish(batch) == false);
     CHECK(http_client.begin_called == true);
     CHECK(http_client.post_called == false);
     CHECK(http_client.end_called == false);
@@ -160,15 +182,9 @@ TEST_CASE("HttpPublisher publish adds JSON content type header")
 
     REQUIRE(publisher.initialize() == true);
 
-    Observation observation{};
-    observation.station_id = "home_ref";
-    observation.sequence_number = 1;
-    observation.timestamp_utc = 1000;
-    observation.temperature_c = 20.0f;
-    observation.humidity_pct = 50.0f;
-    observation.pressure_hpa = 1013.25f;
+    ObservationBatch batch = makeBatch();
 
-    REQUIRE(publisher.publish(observation) == true);
+    REQUIRE(publisher.publish(batch) == true);
 
     CHECK(http_client.add_header_called == true);
     REQUIRE(http_client.last_header_name != nullptr);
@@ -177,7 +193,7 @@ TEST_CASE("HttpPublisher publish adds JSON content type header")
     CHECK(std::string(http_client.last_header_value) == "application/json");
 }
 
-TEST_CASE("HttpPublisher publish sends serialized observation payload")
+TEST_CASE("HttpPublisher publish sends serialized batch payload")
 {
     MockNetworkStatus network_status;
     MockHttpClient http_client;
@@ -187,20 +203,15 @@ TEST_CASE("HttpPublisher publish sends serialized observation payload")
 
     REQUIRE(publisher.initialize() == true);
 
-    Observation observation{};
-    observation.station_id = "home_ref";
-    observation.sequence_number = 42;
-    observation.timestamp_utc = 1700000000;
-    observation.temperature_c = 21.52f;
-    observation.humidity_pct = 48.10f;
-    observation.pressure_hpa = 1012.32f;
+    ObservationBatch batch = makeBatch();
 
-    REQUIRE(publisher.publish(observation) == true);
+    REQUIRE(publisher.publish(batch) == true);
 
     CHECK(http_client.post_called == true);
     CHECK(std::strstr(http_client.last_payload, "\"station_id\":\"home_ref\"") != nullptr);
-    CHECK(std::strstr(http_client.last_payload, "\"sequence_number\":42") != nullptr);
-    CHECK(std::strstr(http_client.last_payload, "\"timestamp_utc\":1700000000") != nullptr);
+    CHECK(std::strstr(http_client.last_payload, "\"sent_at\":\"") != nullptr);
+    CHECK(std::strstr(http_client.last_payload, "\"samples\":[") != nullptr);
+    CHECK(std::strstr(http_client.last_payload, "\"ts\":\"") != nullptr);
     CHECK(std::strstr(http_client.last_payload, "\"temperature_c\":21.52") != nullptr);
     CHECK(std::strstr(http_client.last_payload, "\"humidity_pct\":48.10") != nullptr);
     CHECK(std::strstr(http_client.last_payload, "\"pressure_hpa\":1012.32") != nullptr);
@@ -217,15 +228,9 @@ TEST_CASE("HttpPublisher publish fails when POST returns non-positive response")
 
     REQUIRE(publisher.initialize() == true);
 
-    Observation observation{};
-    observation.station_id = "home_ref";
-    observation.sequence_number = 2;
-    observation.timestamp_utc = 2000;
-    observation.temperature_c = 22.0f;
-    observation.humidity_pct = 55.0f;
-    observation.pressure_hpa = 1011.0f;
+    ObservationBatch batch = makeBatch();
 
-    CHECK(publisher.publish(observation) == false);
+    CHECK(publisher.publish(batch) == false);
     CHECK(http_client.begin_called == true);
     CHECK(http_client.post_called == true);
     CHECK(http_client.end_called == true);
@@ -242,10 +247,9 @@ TEST_CASE("HttpPublisher publish succeeds for 200 response")
 
     REQUIRE(publisher.initialize() == true);
 
-    Observation observation{};
-    observation.station_id = "home_ref";
+    ObservationBatch batch = makeBatch();
 
-    CHECK(publisher.publish(observation) == true);
+    CHECK(publisher.publish(batch) == true);
     CHECK(http_client.end_called == true);
 }
 
@@ -260,10 +264,9 @@ TEST_CASE("HttpPublisher publish succeeds for 201 response")
 
     REQUIRE(publisher.initialize() == true);
 
-    Observation observation{};
-    observation.station_id = "home_ref";
+    ObservationBatch batch = makeBatch();
 
-    CHECK(publisher.publish(observation) == true);
+    CHECK(publisher.publish(batch) == true);
 }
 
 TEST_CASE("HttpPublisher publish succeeds for 204 response")
@@ -277,10 +280,9 @@ TEST_CASE("HttpPublisher publish succeeds for 204 response")
 
     REQUIRE(publisher.initialize() == true);
 
-    Observation observation{};
-    observation.station_id = "home_ref";
+    ObservationBatch batch = makeBatch();
 
-    CHECK(publisher.publish(observation) == true);
+    CHECK(publisher.publish(batch) == true);
 }
 
 TEST_CASE("HttpPublisher publish fails for 400 response")
@@ -294,10 +296,9 @@ TEST_CASE("HttpPublisher publish fails for 400 response")
 
     REQUIRE(publisher.initialize() == true);
 
-    Observation observation{};
-    observation.station_id = "home_ref";
+    ObservationBatch batch = makeBatch();
 
-    CHECK(publisher.publish(observation) == false);
+    CHECK(publisher.publish(batch) == false);
     CHECK(http_client.end_called == true);
 }
 
@@ -312,9 +313,8 @@ TEST_CASE("HttpPublisher publish fails for 500 response")
 
     REQUIRE(publisher.initialize() == true);
 
-    Observation observation{};
-    observation.station_id = "home_ref";
+    ObservationBatch batch = makeBatch();
 
-    CHECK(publisher.publish(observation) == false);
+    CHECK(publisher.publish(batch) == false);
     CHECK(http_client.end_called == true);
 }
