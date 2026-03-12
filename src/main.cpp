@@ -121,18 +121,19 @@ bool initializeController()
     StationConfig station_config = config_loader.load();
 
     SensorFactory sensor_factory;
-    std::vector<Sensor*> sensors = sensor_factory.createSensors(station_config);
+    static std::vector<Sensor*> sensors = sensor_factory.createSensors(station_config);
     
-    WiFiNetworkStatus network_status;
-    ArduinoHttpClientAdapter http_client;
-    SerialLogger logger;
+    static WiFiNetworkStatus network_status;
+    static ArduinoHttpClientAdapter http_client;
+    static SerialLogger logger;
 
-    HttpPublisher publisher(HTTP_CONFIG.HTTP_ENDPOINT, &network_status, &http_client, &logger);
+    static HttpPublisher publisher(HTTP_CONFIG.HTTP_ENDPOINT, &network_status, &http_client, &logger);
+    static std::vector<Publisher*> publishers{&publisher}; // For now we only have one publisher, but we can easily extend this to support multiple publishers in the future
 
     controller = new WeatherStationController(
         station_config.station_id,
         std::move(sensors),
-        std::vector<Publisher*>{&publisher} // For now we only have one publisher, but we can easily extend this to support multiple publishers in the future
+        publishers
     );
 
     if (!controller->initialize())
