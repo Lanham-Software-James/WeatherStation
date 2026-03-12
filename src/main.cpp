@@ -23,8 +23,9 @@ bool initializeController();
 constexpr int BLUE_LED_PIN = 2;
 constexpr int RED_LED_PIN = 4;
 constexpr int SERIAL_BAUD_RATE = 115200;
-constexpr int BOOT_DELAY_MS = 200;
-constexpr int TICK_INTERVAL_MS = 2000;
+constexpr int ERROR_LIGHT_DELAY_MS = 300;
+constexpr int ERROR_TICK_DELAY_MS = 2000;
+constexpr int WAITING_DELAY_MS = 500;
 
 WeatherStationController* controller = nullptr;
 
@@ -33,7 +34,6 @@ void setup()
     initializeLEDs();
 
     Serial.begin(SERIAL_BAUD_RATE);
-    delay(BOOT_DELAY_MS);
 
     connectWifi();
     syncTime();
@@ -43,9 +43,9 @@ void setup()
         while (true)
         {
             digitalWrite(RED_LED_PIN, HIGH);
-            delay(300);
+            delay(ERROR_LIGHT_DELAY_MS);
             digitalWrite(RED_LED_PIN, LOW);
-            delay(300);
+            delay(ERROR_LIGHT_DELAY_MS);
         }
     }
 }
@@ -60,12 +60,11 @@ void loop()
         Serial.print("Tick failure count: ");
         Serial.println(failure_count);
 
-        delay(2000);
+        delay(ERROR_TICK_DELAY_MS);
         return;
     }
 
     failure_count = 0;
-    delay(TICK_INTERVAL_MS);
 }
 
 void initializeLEDs()
@@ -85,7 +84,7 @@ void connectWifi()
 
     while (WiFi.status() != WL_CONNECTED)
     {
-        delay(500);
+        delay(WAITING_DELAY_MS);
         Serial.print(".");
     }
 
@@ -107,7 +106,7 @@ void syncTime()
 
     while (now < 100000)
     {
-        delay(500);
+        delay(WAITING_DELAY_MS);
         Serial.print(".");
         now = time(nullptr);
     }
