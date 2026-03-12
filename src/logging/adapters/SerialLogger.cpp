@@ -1,4 +1,4 @@
-#include "logging/SerialLogger.h"
+#include "logging/adapters/SerialLogger.h"
 
 #include <Arduino.h>
 

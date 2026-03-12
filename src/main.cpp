@@ -12,8 +12,8 @@
 #include "publisher/HttpPublisher.h"
 #include "publisher/adapters/WiFiNetworkStatus.h"
 #include "publisher/adapters/ArduinoHttpClientAdapter.h"
-#include "logging/SerialLogger.h"
-#include "time/ArduinoClock.h"
+#include "logging/adapters/SerialLogger.h"
+#include "time/adapters/ArduinoClock.h"
 
 void initializeLEDs();
 void connectWifi();
