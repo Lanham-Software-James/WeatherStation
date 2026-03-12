@@ -45,6 +45,12 @@ bool WeatherStationController::initialize()
         return false;
     }
 
+    if (clock_ == nullptr)
+    {
+        logger_->println("Controller init failed: clock is null.");
+        return false;
+    }
+
     for (Sensor* sensor : sensors_)
     {
         if (sensor == nullptr)
