@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 #include "model/Observation.h"
 
 class Sensor {
