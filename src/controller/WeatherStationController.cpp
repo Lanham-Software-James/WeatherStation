@@ -1,35 +1,47 @@
-#include <Arduino.h>
 #include <ctime>
 
 #include "controller/WeatherStationController.h"
 
 WeatherStationController::WeatherStationController(
     const char* station_id,
+    unsigned long sample_interval_ms,
+    unsigned long publish_interval_ms,
     const std::vector<Sensor*>& sensors,
-    const std::vector<Publisher*>& publishers)
+    const std::vector<Publisher*>& publishers,
+    Logger* logger,
+    Clock* clock)
     : station_id_(station_id),
+      sample_interval_ms_(sample_interval_ms),
+      publish_interval_ms_(publish_interval_ms),
       sensors_(sensors),
-      publishers_(publishers)
+      publishers_(publishers),
+      logger_(logger),
+      clock_(clock)
 {
 }
 
 bool WeatherStationController::initialize()
 {
+    if (logger_ == nullptr)
+    {
+        return false;
+    }
+    
     if (station_id_ == nullptr)
     {
-        Serial.println("Controller init failed: station_id is null.");
+        if (logger_ != nullptr) logger_->println("Controller init failed: station_id is null.");
         return false;
     }
 
     if (sensors_.empty())
     {
-        Serial.println("Controller init failed: no sensors provided.");
+        logger_->println("Controller init failed: no sensors provided.");
         return false;
     }
 
     if (publishers_.empty())
     {
-        Serial.println("Controller init failed: no publishers provided.");
+        logger_->println("Controller init failed: no publishers provided.");
         return false;
     }
 
@@ -37,17 +49,17 @@ bool WeatherStationController::initialize()
     {
         if (sensor == nullptr)
         {
-            Serial.println("Controller init failed: null sensor.");
+            logger_->println("Controller init failed: null sensor.");
             return false;
         }
 
-        Serial.print("Initializing sensor: ");
-        Serial.println(sensor->getName());
+        logger_->print("Initializing sensor: ");
+        logger_->println(sensor->getName());
 
         if (!sensor->initialize())
         {
-            Serial.print("Failed to initialize sensor: ");
-            Serial.println(sensor->getName());
+            logger_->print("Failed to initialize sensor: ");
+            logger_->println(sensor->getName());
             return false;
         }
     }
@@ -56,74 +68,112 @@ bool WeatherStationController::initialize()
     {
         if (publisher == nullptr)
         {
-            Serial.println("Controller init failed: null publisher.");
+            logger_->println("Controller init failed: null publisher.");
             return false;
         }
 
-        Serial.print("Initializing publisher: ");
-        Serial.println(publisher->getName());
+        logger_->print("Initializing publisher: ");
+        logger_->println(publisher->getName());
 
         if (!publisher->initialize())
         {
-            Serial.print("Failed to initialize publisher: ");
-            Serial.println(publisher->getName());
+            logger_->print("Failed to initialize publisher: ");
+            logger_->println(publisher->getName());
             return false;
         }
     }
 
-    Serial.println("Controller initialized successfully.");
+    const unsigned long now_ms = clock_->millis();
+    last_sample_ms_ = now_ms;
+    last_publish_ms_ = now_ms;
+
+    logger_->println("Controller initialized successfully.");
     return true;
 }
 
 bool WeatherStationController::tick()
 {
+    const unsigned long now_ms = clock_->millis();
+
+    while (now_ms - last_sample_ms_ >= sample_interval_ms_)
+    {
+        last_sample_ms_ += sample_interval_ms_;
+
+        if (!sampleSensors())
+        {
+            return false;
+        }
+    }
+
+    while (now_ms - last_publish_ms_ >= publish_interval_ms_)
+    {
+        last_publish_ms_ += publish_interval_ms_;
+
+        if (!publishBatch())
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool WeatherStationController::sampleSensors()
+{
     Observation obs{};
     obs.station_id = station_id_;
-    obs.sequence_number = sequence_number_++;
-    obs.timestamp_utc = std::time(nullptr);
+    obs.sequence_number = ++sequence_number_;
+    obs.timestamp_utc = clock_->now();
 
     for (Sensor* sensor : sensors_)
     {
         if (!sensor->read(obs))
         {
-            Serial.print("Failed to read sensor: ");
-            Serial.println(sensor->getName());
+            logger_->print("Failed to read sensor: ");
+            logger_->println(sensor->getName());
             return false;
         }
     }
 
-    Serial.println("Observation read successfull.");
+    buffered_samples_.push_back(obs);
 
-    Serial.print("Station ID: ");
-    Serial.println(obs.station_id);
+    logger_->print("Sample collected. Count = ");
+    logger_->print(static_cast<unsigned long>(buffered_samples_.size()));
+    logger_->println("");
 
-    Serial.print("Sequence Number: ");
-    Serial.println(obs.sequence_number);
+    return true;
+}
 
-    Serial.print("Temperature: ");
-    Serial.println(obs.temperature_c);
+bool WeatherStationController::publishBatch()
+{
+    if (buffered_samples_.empty())
+    {
+        logger_->println("No samples collected; skipping publish.");
+        return true;
+    }
 
-    Serial.print("Humidity: ");
-    Serial.println(obs.humidity_pct);
-
-    Serial.print("Pressure: ");
-    Serial.println(obs.pressure_hpa);
-
-    Serial.print("Timestamp (UTC): ");
-    Serial.println(localtime(&obs.timestamp_utc), "%Y-%m-%d %H:%M:%S");
+    ObservationBatch batch{};
+    batch.station_id = station_id_;
+    batch.sent_at = clock_->now();
+    batch.samples = buffered_samples_;
 
     for (Publisher* publisher : publishers_)
     {
-        if (!publisher->publish(obs))
+        if (!publisher->publish(batch))
         {
-            Serial.print("Failed to publish observation with publisher: ");
-            Serial.println(publisher->getName());
+            logger_->print("Failed to publish batch with publisher: ");
+            logger_->println(publisher->getName());
             return false;
         }
     }
 
-    Serial.println("Observations published successfully.");
-    Serial.println("-----------------------------");
+    logger_->println("Batch observation published successfully.");
+    logger_->print("Published sample count: ");
+    logger_->print(static_cast<unsigned long>(buffered_samples_.size()));
+    logger_->println("");
+    logger_->println("-----------------------------");
+
+    buffered_samples_.clear();
 
     return true;
 }

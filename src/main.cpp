@@ -11,6 +11,7 @@
 #include "publisher/adapters/WiFiNetworkStatus.h"
 #include "publisher/adapters/ArduinoHttpClientAdapter.h"
 #include "logging/SerialLogger.h"
+#include "time/ArduinoClock.h"
 
 void initializeLEDs();
 void connectWifi();
@@ -130,10 +131,16 @@ bool initializeController()
     static HttpPublisher publisher(HTTP_CONFIG.HTTP_ENDPOINT, &network_status, &http_client, &logger);
     static std::vector<Publisher*> publishers{&publisher}; // For now we only have one publisher, but we can easily extend this to support multiple publishers in the future
 
+    static ArduinoClock clock;
+
     controller = new WeatherStationController(
         station_config.station_id,
-        std::move(sensors),
-        publishers
+        station_config.sample_interval_ms,
+        station_config.publish_interval_ms,
+        sensors,
+        publishers,
+        &logger,
+        &clock
     );
 
     if (!controller->initialize())

@@ -4,65 +4,71 @@
 #include <string>
 
 #include "model/Observation.h"
+#include "model/ObservationBatch.h"
 #include "serialization/ObservationSerializer.h"
 
-TEST_CASE("ObservationSerializer serializes a complete observation to JSON")
+namespace
 {
-    Observation observation{};
-    observation.station_id = "home_ref";
-    observation.sequence_number = 42;
-    observation.timestamp_utc = 1700000000;
-    observation.temperature_c = 21.52f;
-    observation.humidity_pct = 48.10f;
-    observation.pressure_hpa = 1012.32f;
+    Observation makeObservation(
+        const char* station_id,
+        std::time_t ts,
+        float temperature_c,
+        float humidity_pct,
+        float pressure_hpa)
+    {
+        Observation observation{};
+        observation.station_id = station_id;
+        observation.timestamp_utc = ts;
+        observation.temperature_c = temperature_c;
+        observation.humidity_pct = humidity_pct;
+        observation.pressure_hpa = pressure_hpa;
+        return observation;
+    }
+}
 
-    const char* json = ObservationSerializer::toJson(observation);
+TEST_CASE("ObservationSerializer serializes a complete batch to JSON")
+{
+    ObservationBatch batch{};
+    batch.station_id = "home_ref";
+    batch.sent_at = 1700000060;
+    batch.samples.push_back(makeObservation("home_ref", 1700000000, 21.52f, 48.10f, 1012.32f));
+    batch.samples.push_back(makeObservation("home_ref", 1700000010, 21.60f, 48.00f, 1012.28f));
+
+    const char* json = ObservationSerializer::toJson(batch);
 
     REQUIRE(json != nullptr);
 
-    CHECK(std::string(json) ==
-          "{\"station_id\":\"home_ref\","
-          "\"sequence_number\":42,"
-          "\"timestamp_utc\":1700000000,"
-          "\"temperature_c\":21.52,"
-          "\"humidity_pct\":48.10,"
-          "\"pressure_hpa\":1012.32}");
+    CHECK(std::strstr(json, "\"station_id\":\"home_ref\"") != nullptr);
+    CHECK(std::strstr(json, "\"sent_at\":\"") != nullptr);
+    CHECK(std::strstr(json, "\"samples\":[") != nullptr);
+    CHECK(std::strstr(json, "\"ts\":\"") != nullptr);
+    CHECK(std::strstr(json, "\"temperature_c\":21.52") != nullptr);
+    CHECK(std::strstr(json, "\"humidity_pct\":48.10") != nullptr);
+    CHECK(std::strstr(json, "\"pressure_hpa\":1012.32") != nullptr);
 }
 
-TEST_CASE("ObservationSerializer handles null station_id")
+TEST_CASE("ObservationSerializer handles null station_id in batch")
 {
-    Observation observation{};
-    observation.station_id = nullptr;
-    observation.sequence_number = 1;
-    observation.timestamp_utc = 1000;
-    observation.temperature_c = 10.0f;
-    observation.humidity_pct = 20.0f;
-    observation.pressure_hpa = 1010.0f;
+    ObservationBatch batch{};
+    batch.station_id = nullptr;
+    batch.sent_at = 1700000060;
+    batch.samples.push_back(makeObservation(nullptr, 1700000000, 10.0f, 20.0f, 1010.0f));
 
-    const char* json = ObservationSerializer::toJson(observation);
+    const char* json = ObservationSerializer::toJson(batch);
 
     REQUIRE(json != nullptr);
 
-    CHECK(std::string(json) ==
-          "{\"station_id\":\"\","
-          "\"sequence_number\":1,"
-          "\"timestamp_utc\":1000,"
-          "\"temperature_c\":10.00,"
-          "\"humidity_pct\":20.00,"
-          "\"pressure_hpa\":1010.00}");
+    CHECK(std::strstr(json, "\"station_id\":\"\"") != nullptr);
 }
 
-TEST_CASE("ObservationSerializer formats floating point values to two decimals")
+TEST_CASE("ObservationSerializer formats floating point values to two decimals in batch")
 {
-    Observation observation{};
-    observation.station_id = "station_a";
-    observation.sequence_number = 7;
-    observation.timestamp_utc = 1234567890;
-    observation.temperature_c = 1.2f;
-    observation.humidity_pct = 3.456f;
-    observation.pressure_hpa = 999.0f;
+    ObservationBatch batch{};
+    batch.station_id = "station_a";
+    batch.sent_at = 1700000060;
+    batch.samples.push_back(makeObservation("station_a", 1234567890, 1.2f, 3.456f, 999.0f));
 
-    const char* json = ObservationSerializer::toJson(observation);
+    const char* json = ObservationSerializer::toJson(batch);
 
     REQUIRE(json != nullptr);
 
@@ -71,23 +77,21 @@ TEST_CASE("ObservationSerializer formats floating point values to two decimals")
     CHECK(std::strstr(json, "\"pressure_hpa\":999.00") != nullptr);
 }
 
-TEST_CASE("ObservationSerializer includes all expected JSON keys")
+TEST_CASE("ObservationSerializer includes all expected JSON keys for batch")
 {
-    Observation observation{};
-    observation.station_id = "station_b";
-    observation.sequence_number = 9;
-    observation.timestamp_utc = 2000;
-    observation.temperature_c = 25.0f;
-    observation.humidity_pct = 50.0f;
-    observation.pressure_hpa = 1013.25f;
+    ObservationBatch batch{};
+    batch.station_id = "station_b";
+    batch.sent_at = 1700000060;
+    batch.samples.push_back(makeObservation("station_b", 2000, 25.0f, 50.0f, 1013.25f));
 
-    const char* json = ObservationSerializer::toJson(observation);
+    const char* json = ObservationSerializer::toJson(batch);
 
     REQUIRE(json != nullptr);
 
     CHECK(std::strstr(json, "\"station_id\"") != nullptr);
-    CHECK(std::strstr(json, "\"sequence_number\"") != nullptr);
-    CHECK(std::strstr(json, "\"timestamp_utc\"") != nullptr);
+    CHECK(std::strstr(json, "\"sent_at\"") != nullptr);
+    CHECK(std::strstr(json, "\"samples\"") != nullptr);
+    CHECK(std::strstr(json, "\"ts\"") != nullptr);
     CHECK(std::strstr(json, "\"temperature_c\"") != nullptr);
     CHECK(std::strstr(json, "\"humidity_pct\"") != nullptr);
     CHECK(std::strstr(json, "\"pressure_hpa\"") != nullptr);
@@ -95,21 +99,15 @@ TEST_CASE("ObservationSerializer includes all expected JSON keys")
 
 TEST_CASE("ObservationSerializer reuses a stable buffer for consecutive calls")
 {
-    Observation first{};
+    ObservationBatch first{};
     first.station_id = "station_one";
-    first.sequence_number = 1;
-    first.timestamp_utc = 111;
-    first.temperature_c = 11.0f;
-    first.humidity_pct = 22.0f;
-    first.pressure_hpa = 1001.0f;
+    first.sent_at = 111;
+    first.samples.push_back(makeObservation("station_one", 101, 11.0f, 22.0f, 1001.0f));
 
-    Observation second{};
+    ObservationBatch second{};
     second.station_id = "station_two";
-    second.sequence_number = 2;
-    second.timestamp_utc = 222;
-    second.temperature_c = 33.0f;
-    second.humidity_pct = 44.0f;
-    second.pressure_hpa = 1002.0f;
+    second.sent_at = 222;
+    second.samples.push_back(makeObservation("station_two", 202, 33.0f, 44.0f, 1002.0f));
 
     const char* first_json = ObservationSerializer::toJson(first);
     REQUIRE(first_json != nullptr);
