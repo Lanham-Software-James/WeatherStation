@@ -1,41 +1,41 @@
-#include "publisher/HTTPPublisher.h"
+#include "publisher/HttpPublisher.h"
 
 #include <Arduino.h>
 #include <HTTPClient.h>
 #include <WiFi.h>
 
-HTTPPublisher::HTTPPublisher(const char* endpoint_url)
+HttpPublisher::HttpPublisher(const char* endpoint_url)
     : endpoint_url_(endpoint_url)
 {
 }
 
-const char* HTTPPublisher::getName() const
+const char* HttpPublisher::getName() const
 {
-    return "HTTPPublisher";
+    return "HttpPublisher";
 }
 
-bool HTTPPublisher::onInitialize()
+bool HttpPublisher::onInitialize()
 {
     if (endpoint_url_ == nullptr)
     {
-        Serial.println("HTTPPublisher init failed: endpoint is null");
+        Serial.println("HttpPublisher init failed: endpoint is null");
         return false;
     }
 
     if (WiFi.status() != WL_CONNECTED)
     {
-        Serial.println("HTTPPublisher init failed: WiFi not connected");
+        Serial.println("HttpPublisher init failed: WiFi not connected");
         return false;
     }
 
     return true;
 }
 
-bool HTTPPublisher::onPublish(const Observation& observation)
+bool HttpPublisher::onPublish(const Observation& observation)
 {
     if (WiFi.status() != WL_CONNECTED)
     {
-        Serial.println("HTTPPublisher publish failed: WiFi disconnected");
+        Serial.println("HttpPublisher publish failed: WiFi disconnected");
         return false;
     }
 
@@ -43,7 +43,7 @@ bool HTTPPublisher::onPublish(const Observation& observation)
 
     if (!http.begin(endpoint_url_))
     {
-        Serial.println("HTTPPublisher failed to begin HTTP connection");
+        Serial.println("HttpPublisher failed to begin HTTP connection");
         return false;
     }
 

@@ -2,10 +2,10 @@
 
 #include "publisher/Publisher.h"
 
-class HTTPPublisher : public Publisher
+class HttpPublisher : public Publisher
 {
 public:
-    explicit HTTPPublisher(const char* endpoint_url);
+    explicit HttpPublisher(const char* endpoint_url);
 
     [[nodiscard]] const char* getName() const override;
 
