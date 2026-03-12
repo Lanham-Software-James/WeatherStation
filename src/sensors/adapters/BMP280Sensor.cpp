@@ -1,4 +1,4 @@
-#include "sensors/BMP280Sensor.h"
+#include "sensors/adapters/BMP280Sensor.h"
 
 #include <Arduino.h>
 #include <Wire.h>
