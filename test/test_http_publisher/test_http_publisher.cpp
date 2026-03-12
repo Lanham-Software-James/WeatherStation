@@ -1,14 +1,13 @@
 #include "doctest.h"
 
-#include <cstring>
 #include <string>
 
 #include "model/Observation.h"
 #include "model/ObservationBatch.h"
 #include "publisher/HttpPublisher.h"
-#include "../test/mocks/MockHttpClient.h"
-#include "../test/mocks/MockNetworkStatus.h"
-#include "../test/mocks/MockLogger.h"
+#include "mocks/MockHttpClient.h"
+#include "mocks/MockNetworkStatus.h"
+#include "mocks/MockLogger.h"
 
 namespace
 {
@@ -60,6 +59,7 @@ TEST_CASE("HttpPublisher initialize fails when endpoint is null")
 
     CHECK(publisher.initialize() == false);
     CHECK(publisher.isInitialized() == false);
+    CHECK(logger.contains("endpoint is null"));
 }
 
 TEST_CASE("HttpPublisher initialize fails when network status is null")
@@ -71,6 +71,7 @@ TEST_CASE("HttpPublisher initialize fails when network status is null")
 
     CHECK(publisher.initialize() == false);
     CHECK(publisher.isInitialized() == false);
+    CHECK(logger.contains("network status is null"));
 }
 
 TEST_CASE("HttpPublisher initialize fails when HTTP client is null")
@@ -82,6 +83,7 @@ TEST_CASE("HttpPublisher initialize fails when HTTP client is null")
 
     CHECK(publisher.initialize() == false);
     CHECK(publisher.isInitialized() == false);
+    CHECK(logger.contains("HTTP client is null"));
 }
 
 TEST_CASE("HttpPublisher initialize fails when logger is null")
@@ -106,6 +108,7 @@ TEST_CASE("HttpPublisher initialize fails when network is disconnected")
 
     CHECK(publisher.initialize() == false);
     CHECK(publisher.isInitialized() == false);
+    CHECK(logger.contains("network not connected"));
 }
 
 TEST_CASE("HttpPublisher initialize succeeds with valid dependencies and connected network")
@@ -142,7 +145,6 @@ TEST_CASE("HttpPublisher publish fails when network is disconnected")
     HttpPublisher publisher("https://example.com", &network_status, &http_client, &logger);
 
     REQUIRE(publisher.initialize() == true);
-
     network_status.connected = false;
 
     ObservationBatch batch = makeBatch();
@@ -151,6 +153,7 @@ TEST_CASE("HttpPublisher publish fails when network is disconnected")
     CHECK(http_client.begin_called == false);
     CHECK(http_client.post_called == false);
     CHECK(http_client.end_called == false);
+    CHECK(logger.contains("network disconnected"));
 }
 
 TEST_CASE("HttpPublisher publish fails when HTTP begin fails")
@@ -170,6 +173,7 @@ TEST_CASE("HttpPublisher publish fails when HTTP begin fails")
     CHECK(http_client.begin_called == true);
     CHECK(http_client.post_called == false);
     CHECK(http_client.end_called == false);
+    CHECK(logger.contains("failed to begin HTTP connection"));
 }
 
 TEST_CASE("HttpPublisher publish adds JSON content type header")
@@ -193,6 +197,25 @@ TEST_CASE("HttpPublisher publish adds JSON content type header")
     CHECK(std::string(http_client.last_header_value) == "application/json");
 }
 
+TEST_CASE("HttpPublisher publish calls begin with configured endpoint")
+{
+    MockNetworkStatus network_status;
+    MockHttpClient http_client;
+    MockLogger logger;
+
+    const char* endpoint = "https://example.com";
+    HttpPublisher publisher(endpoint, &network_status, &http_client, &logger);
+
+    REQUIRE(publisher.initialize() == true);
+
+    ObservationBatch batch = makeBatch();
+
+    REQUIRE(publisher.publish(batch) == true);
+
+    REQUIRE(http_client.last_url != nullptr);
+    CHECK(std::string(http_client.last_url) == endpoint);
+}
+
 TEST_CASE("HttpPublisher publish sends serialized batch payload")
 {
     MockNetworkStatus network_status;
@@ -208,13 +231,13 @@ TEST_CASE("HttpPublisher publish sends serialized batch payload")
     REQUIRE(publisher.publish(batch) == true);
 
     CHECK(http_client.post_called == true);
-    CHECK(std::strstr(http_client.last_payload, "\"station_id\":\"home_ref\"") != nullptr);
-    CHECK(std::strstr(http_client.last_payload, "\"sent_at\":\"") != nullptr);
-    CHECK(std::strstr(http_client.last_payload, "\"samples\":[") != nullptr);
-    CHECK(std::strstr(http_client.last_payload, "\"ts\":\"") != nullptr);
-    CHECK(std::strstr(http_client.last_payload, "\"temperature_c\":21.52") != nullptr);
-    CHECK(std::strstr(http_client.last_payload, "\"humidity_pct\":48.10") != nullptr);
-    CHECK(std::strstr(http_client.last_payload, "\"pressure_hpa\":1012.32") != nullptr);
+    CHECK(http_client.last_payload.find("\"station_id\":\"home_ref\"") != std::string::npos);
+    CHECK(http_client.last_payload.find("\"sent_at\":\"") != std::string::npos);
+    CHECK(http_client.last_payload.find("\"samples\":[") != std::string::npos);
+    CHECK(http_client.last_payload.find("\"ts\":\"") != std::string::npos);
+    CHECK(http_client.last_payload.find("\"temperature_c\":21.52") != std::string::npos);
+    CHECK(http_client.last_payload.find("\"humidity_pct\":48.10") != std::string::npos);
+    CHECK(http_client.last_payload.find("\"pressure_hpa\":1012.32") != std::string::npos);
 }
 
 TEST_CASE("HttpPublisher publish fails when POST returns non-positive response")
@@ -234,6 +257,7 @@ TEST_CASE("HttpPublisher publish fails when POST returns non-positive response")
     CHECK(http_client.begin_called == true);
     CHECK(http_client.post_called == true);
     CHECK(http_client.end_called == true);
+    CHECK(logger.contains("HTTP POST failed"));
 }
 
 TEST_CASE("HttpPublisher publish succeeds for 200 response")
@@ -251,6 +275,7 @@ TEST_CASE("HttpPublisher publish succeeds for 200 response")
 
     CHECK(publisher.publish(batch) == true);
     CHECK(http_client.end_called == true);
+    CHECK(logger.contains("HTTP response"));
 }
 
 TEST_CASE("HttpPublisher publish succeeds for 201 response")
@@ -300,6 +325,7 @@ TEST_CASE("HttpPublisher publish fails for 400 response")
 
     CHECK(publisher.publish(batch) == false);
     CHECK(http_client.end_called == true);
+    CHECK(logger.contains("HTTP response"));
 }
 
 TEST_CASE("HttpPublisher publish fails for 500 response")
@@ -317,4 +343,5 @@ TEST_CASE("HttpPublisher publish fails for 500 response")
 
     CHECK(publisher.publish(batch) == false);
     CHECK(http_client.end_called == true);
+    CHECK(logger.contains("HTTP response"));
 }

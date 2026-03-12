@@ -1,4 +1,4 @@
-#include "sensors/SHT41Sensor.h"
+#include "sensors/adapters/SHT41Sensor.h"
 
 SHT41Sensor::SHT41Sensor(const SensorConfig& config)
     : config_(config)

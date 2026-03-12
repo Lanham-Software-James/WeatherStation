@@ -1,7 +1,12 @@
 #include "sensors/SensorFactory.h"
 
-#include "sensors/BMP280Sensor.h"
-#include "sensors/SHT41Sensor.h"
+SensorFactory::SensorFactory(
+    SensorCreator sht41_creator,
+    SensorCreator bmp280_creator)
+    : sht41_creator_(std::move(sht41_creator)),
+      bmp280_creator_(std::move(bmp280_creator))
+{
+}
 
 std::vector<Sensor*> SensorFactory::createSensors(const StationConfig& config)
 {
@@ -17,11 +22,17 @@ std::vector<Sensor*> SensorFactory::createSensors(const StationConfig& config)
         switch (sensor_config.type)
         {
             case SensorType::SHT41:
-                sensors.push_back(new SHT41Sensor(sensor_config));
+                if (sht41_creator_)
+                {
+                    sensors.push_back(sht41_creator_(sensor_config));
+                }
                 break;
 
             case SensorType::BMP280:
-                sensors.push_back(new BMP280Sensor(sensor_config));
+                if (bmp280_creator_)
+                {
+                    sensors.push_back(bmp280_creator_(sensor_config));
+                }
                 break;
         }
     }

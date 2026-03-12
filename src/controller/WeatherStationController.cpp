@@ -33,6 +33,18 @@ bool WeatherStationController::initialize()
         return false;
     }
 
+    if (sample_interval_ms_ == 0)
+    {
+        logger_->println("Controller init failed: sample interval must be > 0.");
+        return false;
+    }
+
+    if (publish_interval_ms_ == 0)
+    {
+        logger_->println("Controller init failed: publish interval must be > 0.");
+        return false;
+    }
+
     if (sensors_.empty())
     {
         logger_->println("Controller init failed: no sensors provided.");
@@ -42,6 +54,12 @@ bool WeatherStationController::initialize()
     if (publishers_.empty())
     {
         logger_->println("Controller init failed: no publishers provided.");
+        return false;
+    }
+
+    if (clock_ == nullptr)
+    {
+        logger_->println("Controller init failed: clock is null.");
         return false;
     }
 
