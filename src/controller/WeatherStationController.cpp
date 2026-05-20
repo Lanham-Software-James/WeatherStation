@@ -105,8 +105,21 @@ bool WeatherStationController::initialize()
     last_sample_ms_ = now_ms;
     last_publish_ms_ = now_ms;
 
+    consecutive_publish_failures_ = 0;
+    consecutive_sample_failures_ = 0;
+
     logger_->println("Controller initialized successfully.");
     return true;
+}
+
+int WeatherStationController::consecutivePublishFailures() const
+{
+    return consecutive_publish_failures_;
+}
+
+int WeatherStationController::consecutiveSampleFailures() const
+{
+    return consecutive_sample_failures_;
 }
 
 bool WeatherStationController::tick()
@@ -149,11 +162,13 @@ bool WeatherStationController::sampleSensors()
         {
             logger_->print("Failed to read sensor: ");
             logger_->println(sensor->getName());
+            consecutive_sample_failures_++;
             return false;
         }
     }
 
     buffered_samples_.push_back(obs);
+    consecutive_sample_failures_ = 0;
 
     logger_->print("Sample collected. Count = ");
     logger_->print(static_cast<unsigned long>(buffered_samples_.size()));
@@ -181,9 +196,12 @@ bool WeatherStationController::publishBatch()
         {
             logger_->print("Failed to publish batch with publisher: ");
             logger_->println(publisher->getName());
+            consecutive_publish_failures_++;
             return false;
         }
     }
+
+    consecutive_publish_failures_ = 0;
 
     logger_->println("Batch observation published successfully.");
     logger_->print("Published sample count: ");

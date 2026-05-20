@@ -59,8 +59,6 @@ void setup()
 
 void loop()
 {
-    static int failure_count = 0;
-
     if (WiFi.status() != WL_CONNECTED)
     {
         logger.println("WiFi disconnected; attempting reconnect...");
@@ -88,28 +86,36 @@ void loop()
         }
     }
 
-    if (!controller->tick())
+    controller->tick();
+
+    const int pub_failures = controller->consecutivePublishFailures();
+    const int sample_failures = controller->consecutiveSampleFailures();
+
+    if (pub_failures >= MAX_TICK_FAILURES)
     {
-        failure_count++;
-        logger.print("Tick failure count: ");
-        logger.print(failure_count);
-        logger.println("");
-
-        if (failure_count >= MAX_TICK_FAILURES)
-        {
-            logger.println("Too many tick failures; resetting controller.");
-            delete controller;
-            controller = nullptr;
-            failure_count = 0;
-            digitalWrite(RED_LED_PIN, HIGH);
-            digitalWrite(BLUE_LED_PIN, LOW);
-        }
-
+        logger.print("Consecutive publish failures: ");
+        logger.print(pub_failures);
+        logger.println("; resetting controller.");
+        delete controller;
+        controller = nullptr;
+        digitalWrite(RED_LED_PIN, HIGH);
+        digitalWrite(BLUE_LED_PIN, LOW);
         delay(ERROR_TICK_DELAY_MS);
         return;
     }
 
-    failure_count = 0;
+    if (sample_failures >= MAX_TICK_FAILURES)
+    {
+        logger.print("Consecutive sample failures: ");
+        logger.print(sample_failures);
+        logger.println("; resetting controller.");
+        delete controller;
+        controller = nullptr;
+        digitalWrite(RED_LED_PIN, HIGH);
+        digitalWrite(BLUE_LED_PIN, LOW);
+        delay(ERROR_TICK_DELAY_MS);
+        return;
+    }
 }
 
 void initializeLEDs()
