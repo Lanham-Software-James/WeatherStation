@@ -54,29 +54,6 @@ TEST_CASE("SensorFactory preserves sensor order")
     for (auto* s : sensors) delete s;
 }
 
-TEST_CASE("SensorFactory preserves sensor order")
-{
-    SensorFactory factory(
-        [](const SensorConfig& config) { return new MockConstructedSensor("SHT41Sensor", config.id); },
-        [](const SensorConfig& config) { return new MockConstructedSensor("BMP280Sensor", config.id); }
-    );
-
-    StationConfig config{};
-    config.sensors = {
-        {SensorType::SHT41, "sht41_main", true},
-        {SensorType::BMP280, "bmp280_main", true}
-    };
-
-    auto sensors = factory.createSensors(config);
-
-    REQUIRE(sensors.size() == 2);
-
-    CHECK(std::string(sensors[0]->getName()) == "SHT41Sensor");
-    CHECK(std::string(sensors[1]->getName()) == "BMP280Sensor");
-
-    for (auto* s : sensors) delete s;
-}
-
 TEST_CASE("SensorFactory skips disabled sensors")
 {
     SensorFactory factory(
