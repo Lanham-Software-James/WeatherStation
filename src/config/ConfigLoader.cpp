@@ -24,5 +24,11 @@ StationConfig ConfigLoader::load() const
     config.sensors.push_back(sht41_config);
     config.sensors.push_back(bmp280_config);
 
+    PublisherConfig http_config{};
+    http_config.type = PublisherType::HTTP;
+    http_config.id = "http_main";
+
+    config.publishers.push_back(http_config);
+
     return config;
 }
