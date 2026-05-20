@@ -24,6 +24,9 @@ class WeatherStationController
         bool initialize();
         bool tick();
 
+        [[nodiscard]] int consecutivePublishFailures() const;
+        [[nodiscard]] int consecutiveSampleFailures() const;
+
     private:
         bool sampleSensors();
         bool publishBatch();
@@ -42,6 +45,9 @@ class WeatherStationController
         unsigned long last_publish_ms_{0};
 
         std::vector<Observation> buffered_samples_;
+
+        int consecutive_publish_failures_{0};
+        int consecutive_sample_failures_{0};
 
         Clock* clock_;
 };
