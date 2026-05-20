@@ -9,6 +9,7 @@
 #include "sensors/adapters/SHT41Sensor.h"
 #include "sensors/adapters/BMP280Sensor.h"
 #include "config/Secrets.h"
+#include "publisher/PublisherFactory.h"
 #include "publisher/HttpPublisher.h"
 #include "publisher/adapters/WiFiNetworkStatus.h"
 #include "publisher/adapters/ArduinoHttpClientAdapter.h"
@@ -132,13 +133,18 @@ bool initializeController()
     );
 
     static std::vector<Sensor*> sensors = sensor_factory.createSensors(station_config);
-    
+
     static WiFiNetworkStatus network_status;
     static ArduinoHttpClientAdapter http_client;
     static SerialLogger logger;
 
-    static HttpPublisher publisher(HTTP_CONFIG.HTTP_ENDPOINT, &network_status, &http_client, &logger);
-    static std::vector<Publisher*> publishers{&publisher}; // For now we only have one publisher, but we can easily extend this to support multiple publishers in the future
+    PublisherFactory publisher_factory(
+        [](const PublisherConfig& config) -> Publisher* {
+            return new HttpPublisher(HTTP_CONFIG.HTTP_ENDPOINT, &network_status, &http_client, &logger);
+        }
+    );
+
+    static std::vector<Publisher*> publishers = publisher_factory.createPublishers(station_config);
 
     static ArduinoClock clock;
 
