@@ -43,12 +43,6 @@ bool HttpPublisher::onInitialize()
         return false;
     }
 
-    if (!network_status_->isConnected())
-    {
-        if (logger_ != nullptr) logger_->println("HttpPublisher init failed: network not connected");
-        return false;
-    }
-
     return true;
 }
 

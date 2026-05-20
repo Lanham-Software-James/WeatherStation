@@ -17,49 +17,93 @@
 #include "time/adapters/ArduinoClock.h"
 
 void initializeLEDs();
-void connectWifi();
-void syncTime();
+bool connectWifi();
+bool syncTime();
+void initializeHardware();
 bool initializeController();
 
 constexpr int BLUE_LED_PIN = 2;
 constexpr int RED_LED_PIN = 4;
 constexpr int SERIAL_BAUD_RATE = 115200;
-constexpr int ERROR_LIGHT_DELAY_MS = 300;
 constexpr int ERROR_TICK_DELAY_MS = 2000;
 constexpr int WAITING_DELAY_MS = 500;
+constexpr unsigned long MAX_WIFI_WAIT_MS = 30000;
+constexpr unsigned long MAX_NTP_WAIT_MS = 15000;
+constexpr int MAX_TICK_FAILURES = 5;
+
+static SerialLogger logger;
+static WiFiNetworkStatus network_status;
+static ArduinoHttpClientAdapter http_client;
+static ArduinoClock clock_instance;
+static StationConfig station_config;
+static std::vector<Sensor*> sensors;
+static std::vector<Publisher*> publishers;
 
 WeatherStationController* controller = nullptr;
 
 void setup()
 {
     initializeLEDs();
-
     Serial.begin(SERIAL_BAUD_RATE);
 
-    connectWifi();
-    syncTime();
+    if (!connectWifi())
+        logger.println("WiFi unavailable at startup; will retry in loop.");
+    else if (!syncTime())
+        logger.println("NTP sync failed; timestamps may be inaccurate.");
+
+    initializeHardware();
 
     if (!initializeController())
-    {
-        while (true)
-        {
-            digitalWrite(RED_LED_PIN, HIGH);
-            delay(ERROR_LIGHT_DELAY_MS);
-            digitalWrite(RED_LED_PIN, LOW);
-            delay(ERROR_LIGHT_DELAY_MS);
-        }
-    }
+        logger.println("Controller initialization failed; will retry in loop.");
 }
 
 void loop()
 {
     static int failure_count = 0;
 
-    if (controller == nullptr || !controller->tick())
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        logger.println("WiFi disconnected; attempting reconnect...");
+        digitalWrite(RED_LED_PIN, HIGH);
+        digitalWrite(BLUE_LED_PIN, LOW);
+
+        if (!connectWifi())
+        {
+            logger.println("WiFi reconnect failed.");
+            delay(ERROR_TICK_DELAY_MS);
+            return;
+        }
+
+        syncTime();
+    }
+
+    if (controller == nullptr)
+    {
+        logger.println("Attempting controller initialization...");
+        if (!initializeController())
+        {
+            logger.println("Controller initialization failed; retrying...");
+            delay(ERROR_TICK_DELAY_MS);
+            return;
+        }
+    }
+
+    if (!controller->tick())
     {
         failure_count++;
-        Serial.print("Tick failure count: ");
-        Serial.println(failure_count);
+        logger.print("Tick failure count: ");
+        logger.print(failure_count);
+        logger.println("");
+
+        if (failure_count >= MAX_TICK_FAILURES)
+        {
+            logger.println("Too many tick failures; resetting controller.");
+            delete controller;
+            controller = nullptr;
+            failure_count = 0;
+            digitalWrite(RED_LED_PIN, HIGH);
+            digitalWrite(BLUE_LED_PIN, LOW);
+        }
 
         delay(ERROR_TICK_DELAY_MS);
         return;
@@ -77,77 +121,80 @@ void initializeLEDs()
     digitalWrite(BLUE_LED_PIN, LOW);
 }
 
-void connectWifi()
+bool connectWifi()
 {
     WiFi.begin(NETWORK_CONFIG.WIFI_SSID, NETWORK_CONFIG.WIFI_PASSWORD);
+    logger.print("Connecting to WiFi");
 
-    Serial.print("Connecting to WiFi");
-
+    const unsigned long start_ms = millis();
     while (WiFi.status() != WL_CONNECTED)
     {
+        if (millis() - start_ms >= MAX_WIFI_WAIT_MS)
+        {
+            logger.println("");
+            logger.println("WiFi connection timed out.");
+            return false;
+        }
         delay(WAITING_DELAY_MS);
-        Serial.print(".");
+        logger.print(".");
     }
 
-    Serial.println();
-    Serial.println("WiFi connected");
+    logger.println("");
+    logger.println("WiFi connected.");
+    return true;
 }
 
-void syncTime()
+bool syncTime()
 {
-    const char* ntpServer = "pool.ntp.org";
-    const long gmtOffset_sec = 0;
-    const int daylightOffset_sec = 0;
+    configTime(0, 0, "pool.ntp.org");
+    logger.print("Waiting for NTP time");
 
-    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-
-    Serial.print("Waiting for NTP time");
-
+    const unsigned long start_ms = millis();
     time_t now = time(nullptr);
-
     while (now < 100000)
     {
+        if (millis() - start_ms >= MAX_NTP_WAIT_MS)
+        {
+            logger.println("");
+            logger.println("NTP sync timed out.");
+            return false;
+        }
         delay(WAITING_DELAY_MS);
-        Serial.print(".");
+        logger.print(".");
         now = time(nullptr);
     }
 
-    Serial.println();
-    Serial.println("Time synchronized");
+    logger.println("");
+    logger.println("Time synchronized.");
+    return true;
 }
 
-bool initializeController()
+void initializeHardware()
 {
-    Serial.println("Booting weather station...");
+    logger.println("Initializing hardware...");
 
     ConfigLoader config_loader;
-    StationConfig station_config = config_loader.load();
+    station_config = config_loader.load();
 
     SensorFactory sensor_factory(
-        [](const SensorConfig& config) -> Sensor* {
-            return new SHT41Sensor(config);
-        },
-        [](const SensorConfig& config) -> Sensor* {
-            return new BMP280Sensor(config);
-        }
+        [](const SensorConfig& config) -> Sensor* { return new SHT41Sensor(config); },
+        [](const SensorConfig& config) -> Sensor* { return new BMP280Sensor(config); }
     );
-
-    static std::vector<Sensor*> sensors = sensor_factory.createSensors(station_config);
-
-    static WiFiNetworkStatus network_status;
-    static ArduinoHttpClientAdapter http_client;
-    static SerialLogger logger;
+    sensors = sensor_factory.createSensors(station_config);
 
     PublisherFactory publisher_factory(
         [](const PublisherConfig& config) -> Publisher* {
             return new HttpPublisher(HTTP_CONFIG.HTTP_ENDPOINT, &network_status, &http_client, &logger);
         }
     );
+    publishers = publisher_factory.createPublishers(station_config);
+}
 
-    static std::vector<Publisher*> publishers = publisher_factory.createPublishers(station_config);
+bool initializeController()
+{
+    logger.println("Booting weather station...");
 
-    static ArduinoClock clock;
-
+    delete controller;
     controller = new WeatherStationController(
         station_config.station_id,
         station_config.sample_interval_ms,
@@ -155,12 +202,14 @@ bool initializeController()
         sensors,
         publishers,
         &logger,
-        &clock
+        &clock_instance
     );
 
     if (!controller->initialize())
     {
-        Serial.println("Controller failed to initialize.");
+        logger.println("Controller failed to initialize.");
+        delete controller;
+        controller = nullptr;
         return false;
     }
 
