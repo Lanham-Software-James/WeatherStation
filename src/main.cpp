@@ -164,7 +164,6 @@ bool initializeController()
         return false;
     }
 
-    Serial.println("Controller initialized successfully.");
     digitalWrite(RED_LED_PIN, LOW);
     digitalWrite(BLUE_LED_PIN, HIGH);
     return true;
