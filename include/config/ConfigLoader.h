@@ -1,9 +1,14 @@
 #pragma once
 
-#include "config/StationConfig.h"
+#include "config/AppConfig.h"
+#include "filesystem/IFileSystem.h"
 
 class ConfigLoader
 {
 public:
-    [[nodiscard]] StationConfig load() const;
+    explicit ConfigLoader(IFileSystem& fs);
+    [[nodiscard]] AppConfig load() const;
+
+private:
+    IFileSystem& fs_;
 };

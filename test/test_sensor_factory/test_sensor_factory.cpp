@@ -9,8 +9,8 @@
 TEST_CASE("SensorFactory creates enabled sensors only")
 {
     SensorFactory factory(
-        [](const SensorConfig& config) { return new MockConstructedSensor("SHT41Sensor", config.id); },
-        [](const SensorConfig& config) { return new MockConstructedSensor("BMP280Sensor", config.id); }
+        [](const SensorConfig& config) { return new MockConstructedSensor("SHT41Sensor", config.id.c_str()); },
+        [](const SensorConfig& config) { return new MockConstructedSensor("BMP280Sensor", config.id.c_str()); }
     );
 
     StationConfig config{};
@@ -34,8 +34,8 @@ TEST_CASE("SensorFactory creates enabled sensors only")
 TEST_CASE("SensorFactory preserves sensor order")
 {
     SensorFactory factory(
-        [](const SensorConfig& config) { return new MockConstructedSensor("SHT41Sensor", config.id); },
-        [](const SensorConfig& config) { return new MockConstructedSensor("BMP280Sensor", config.id); }
+        [](const SensorConfig& config) { return new MockConstructedSensor("SHT41Sensor", config.id.c_str()); },
+        [](const SensorConfig& config) { return new MockConstructedSensor("BMP280Sensor", config.id.c_str()); }
     );
 
     StationConfig config{};
@@ -57,8 +57,8 @@ TEST_CASE("SensorFactory preserves sensor order")
 TEST_CASE("SensorFactory skips disabled sensors")
 {
     SensorFactory factory(
-        [](const SensorConfig& config) { return new MockConstructedSensor("SHT41Sensor", config.id); },
-        [](const SensorConfig& config) { return new MockConstructedSensor("BMP280Sensor", config.id); }
+        [](const SensorConfig& config) { return new MockConstructedSensor("SHT41Sensor", config.id.c_str()); },
+        [](const SensorConfig& config) { return new MockConstructedSensor("BMP280Sensor", config.id.c_str()); }
     );
 
     StationConfig config{};
@@ -80,7 +80,7 @@ TEST_CASE("SensorFactory handles missing creator")
 {
     SensorFactory factory(
         nullptr,
-        [](const SensorConfig& config) { return new MockConstructedSensor("BMP280Sensor", config.id); }
+        [](const SensorConfig& config) { return new MockConstructedSensor("BMP280Sensor", config.id.c_str()); }
     );
 
     StationConfig config{};
@@ -100,8 +100,8 @@ TEST_CASE("SensorFactory handles missing creator")
 TEST_CASE("SensorFactory passes config id to sensor constructor")
 {
     SensorFactory factory(
-        [](const SensorConfig& config) { return new MockConstructedSensor("SHT41Sensor", config.id); },
-        [](const SensorConfig& config) { return new MockConstructedSensor("BMP280Sensor", config.id); }
+        [](const SensorConfig& config) { return new MockConstructedSensor("SHT41Sensor", config.id.c_str()); },
+        [](const SensorConfig& config) { return new MockConstructedSensor("BMP280Sensor", config.id.c_str()); }
     );
 
     StationConfig config{};

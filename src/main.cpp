@@ -4,11 +4,12 @@
 #include <vector>
 
 #include "controller/WeatherStationController.h"
+#include "config/AppConfig.h"
 #include "config/ConfigLoader.h"
+#include "filesystem/LittleFSAdapter.h"
 #include "sensors/SensorFactory.h"
 #include "sensors/adapters/SHT41Sensor.h"
 #include "sensors/adapters/BMP280Sensor.h"
-#include "config/Secrets.h"
 #include "publisher/MqttPublisher.h"
 #include "publisher/adapters/PubSubClientAdapter.h"
 #include "logging/adapters/SerialLogger.h"
@@ -22,6 +23,7 @@ void ledFastBlinkStep();
 void ledPulse();
 void ledDoubleBlink();
 void ledSolid();
+void loadConfig();
 bool connectWifi();
 bool syncTime();
 void initializeHardware();
@@ -42,7 +44,7 @@ constexpr int MAX_TICK_FAILURES = 5;
 static SerialLogger logger;
 static PubSubClientAdapter mqtt_client;
 static ArduinoClock clock_instance;
-static StationConfig station_config;
+static AppConfig app_config;
 static std::vector<Sensor*> sensors;
 static std::vector<Publisher*> publishers;
 
@@ -53,6 +55,8 @@ void setup()
 {
     initializeLEDs();
     Serial.begin(SERIAL_BAUD_RATE);
+
+    loadConfig();
 
     if (!connectWifi())
         logger.println("WiFi unavailable at startup; will retry in loop.");
@@ -181,9 +185,18 @@ void ledDoubleBlink()
 
 void ledSolid() { ledOn(); }
 
+void loadConfig()
+{
+    static LittleFSAdapter fs;
+    if (!fs.begin())
+        logger.println("LittleFS mount failed; using default config.");
+    ConfigLoader loader(fs);
+    app_config = loader.load();
+}
+
 bool connectWifi()
 {
-    WiFi.begin(NETWORK_CONFIG.WIFI_SSID, NETWORK_CONFIG.WIFI_PASSWORD);
+    WiFi.begin(app_config.network.WIFI_SSID.c_str(), app_config.network.WIFI_PASSWORD.c_str());
     logger.print("Connecting to WiFi");
 
     const unsigned long start_ms = millis();
@@ -235,20 +248,17 @@ void initializeHardware()
 {
     logger.println("Initializing hardware...");
 
-    ConfigLoader config_loader;
-    station_config = config_loader.load();
-
     SensorFactory sensor_factory(
         [](const SensorConfig& config) -> Sensor* { return new SHT41Sensor(config); },
         [](const SensorConfig& config) -> Sensor* { return new BMP280Sensor(config); }
     );
-    sensors = sensor_factory.createSensors(station_config);
+    sensors = sensor_factory.createSensors(app_config.station);
 
     publishers.push_back(new MqttPublisher(
-        MQTT_CONFIG.BROKER_HOST,
-        MQTT_CONFIG.BROKER_PORT,
-        MQTT_CONFIG.CLIENT_ID,
-        MQTT_CONFIG.TOPIC,
+        app_config.mqtt.BROKER_HOST.c_str(),
+        app_config.mqtt.BROKER_PORT,
+        app_config.mqtt.CLIENT_ID.c_str(),
+        app_config.mqtt.TOPIC.c_str(),
         &mqtt_client,
         &logger
     ));
@@ -260,9 +270,9 @@ bool initializeController()
 
     delete controller;
     controller = new WeatherStationController(
-        station_config.station_id,
-        station_config.sample_interval_ms,
-        station_config.publish_interval_ms,
+        app_config.station.station_id.c_str(),
+        app_config.station.sample_interval_ms,
+        app_config.station.publish_interval_ms,
         sensors,
         publishers,
         &logger,

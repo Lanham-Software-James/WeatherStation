@@ -15,7 +15,7 @@ const char* BMP280Sensor::getName() const
 
 const char* BMP280Sensor::getId() const
 {
-    return config_.id;
+    return config_.id.c_str();
 }
 
 bool BMP280Sensor::onInitialize()

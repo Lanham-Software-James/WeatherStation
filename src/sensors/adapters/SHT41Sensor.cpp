@@ -12,7 +12,7 @@ const char* SHT41Sensor::getName() const
 
 const char* SHT41Sensor::getId() const
 {
-    return config_.id;
+    return config_.id.c_str();
 }
 
 bool SHT41Sensor::onInitialize()

@@ -1,46 +1,138 @@
-#include <cstring>
+#include <string>
+#include <unordered_map>
 
 #include "doctest.h"
 #include "config/ConfigLoader.h"
+#include "filesystem/IFileSystem.h"
 
-TEST_CASE("ConfigLoader returns default station config")
+class StringFileSystem : public IFileSystem
 {
-    ConfigLoader loader;
-    StationConfig config = loader.load();
+    std::unordered_map<std::string, std::string> files_;
+public:
+    void add(const char* path, std::string content)
+    {
+        files_[path] = std::move(content);
+    }
 
-    CHECK(std::strcmp(config.station_id, "station-001") == 0);
-    REQUIRE(config.sensors.size() == 2);
+    bool readFile(const char* path, std::string& out) const override
+    {
+        auto it = files_.find(path);
+        if (it == files_.end())
+            return false;
+        out = it->second;
+        return true;
+    }
+};
 
-    CHECK(config.sensors[0].type == SensorType::SHT41);
-    CHECK(config.sensors[1].type == SensorType::BMP280);
+static const char* CONFIG_JSON = R"({
+    "station_id": "station-001",
+    "sample_interval_ms": 10000,
+    "publish_interval_ms": 10000,
+    "mqtt": {
+        "broker_host": "192.168.0.50",
+        "broker_port": 1883,
+"topic": "weather/station-001/telemetry"
+    },
+    "sensors": [
+        {
+            "type": "SHT41",
+            "id": "sht41_main",
+            "enabled": true,
+            "sda_pin": 21,
+            "scl_pin": 22,
+            "i2c_address": 68
+        },
+        {
+            "type": "BMP280",
+            "id": "bmp280_main",
+            "enabled": true,
+            "sda_pin": 21,
+            "scl_pin": 22,
+            "i2c_address": 118
+        }
+    ]
+})";
+
+static const char* SECRETS_JSON = R"({
+    "wifi_ssid": "TestNetwork",
+    "wifi_password": "test_password"
+})";
+
+TEST_CASE("ConfigLoader returns station config from JSON")
+{
+    StringFileSystem fs;
+    fs.add("config.json", CONFIG_JSON);
+
+    ConfigLoader loader(fs);
+    AppConfig config = loader.load();
+
+    CHECK(config.station.station_id == "station-001");
+    REQUIRE(config.station.sensors.size() == 2);
+    CHECK(config.station.sensors[0].type == SensorType::SHT41);
+    CHECK(config.station.sensors[1].type == SensorType::BMP280);
 }
 
 TEST_CASE("ConfigLoader returns correct sample and publish intervals")
 {
-    ConfigLoader loader;
-    StationConfig config = loader.load();
+    StringFileSystem fs;
+    fs.add("config.json", CONFIG_JSON);
 
-    CHECK(config.sample_interval_ms == 10000);
-    CHECK(config.publish_interval_ms == 10000);
+    ConfigLoader loader(fs);
+    AppConfig config = loader.load();
+
+    CHECK(config.station.sample_interval_ms == 10000);
+    CHECK(config.station.publish_interval_ms == 10000);
 }
 
 TEST_CASE("ConfigLoader returns sensor configuration details")
 {
-    ConfigLoader loader;
-    StationConfig config = loader.load();
+    StringFileSystem fs;
+    fs.add("config.json", CONFIG_JSON);
 
-    REQUIRE(config.sensors.size() == 2);
+    ConfigLoader loader(fs);
+    AppConfig config = loader.load();
 
-    CHECK(std::strcmp(config.sensors[0].id, "sht41_main") == 0);
-    CHECK(config.sensors[0].sda_pin == 21);
-    CHECK(config.sensors[0].scl_pin == 22);
-    CHECK(config.sensors[0].i2c_address == 0x44);
-    CHECK(config.sensors[0].enabled == true);
+    REQUIRE(config.station.sensors.size() == 2);
 
-    CHECK(std::strcmp(config.sensors[1].id, "bmp280_main") == 0);
-    CHECK(config.sensors[1].sda_pin == 21);
-    CHECK(config.sensors[1].scl_pin == 22);
-    CHECK(config.sensors[1].i2c_address == 0x76);
-    CHECK(config.sensors[1].enabled == true);
+    CHECK(config.station.sensors[0].id == "sht41_main");
+    CHECK(config.station.sensors[0].sda_pin == 21);
+    CHECK(config.station.sensors[0].scl_pin == 22);
+    CHECK(config.station.sensors[0].i2c_address == 0x44);
+    CHECK(config.station.sensors[0].enabled == true);
+
+    CHECK(config.station.sensors[1].id == "bmp280_main");
+    CHECK(config.station.sensors[1].sda_pin == 21);
+    CHECK(config.station.sensors[1].scl_pin == 22);
+    CHECK(config.station.sensors[1].i2c_address == 0x76);
+    CHECK(config.station.sensors[1].enabled == true);
 }
 
+TEST_CASE("ConfigLoader returns network and MQTT config from JSON")
+{
+    StringFileSystem fs;
+    fs.add("config.json", CONFIG_JSON);
+    fs.add("secrets.json", SECRETS_JSON);
+
+    ConfigLoader loader(fs);
+    AppConfig config = loader.load();
+
+    CHECK(config.network.WIFI_SSID == "TestNetwork");
+    CHECK(config.network.WIFI_PASSWORD == "test_password");
+    CHECK(config.mqtt.BROKER_HOST == "192.168.0.50");
+    CHECK(config.mqtt.BROKER_PORT == 1883);
+    CHECK(config.mqtt.CLIENT_ID == config.station.station_id);
+    CHECK(config.mqtt.TOPIC == "weather/station-001/telemetry");
+}
+
+TEST_CASE("ConfigLoader uses struct defaults when files are missing")
+{
+    StringFileSystem fs;
+
+    ConfigLoader loader(fs);
+    AppConfig config = loader.load();
+
+    CHECK(config.station.station_id == "default_station");
+    CHECK(config.station.sensors.size() == 0);
+    CHECK(config.network.WIFI_SSID == "CHANGE_ME");
+    CHECK(config.mqtt.BROKER_HOST == "CHANGE_ME");
+}
