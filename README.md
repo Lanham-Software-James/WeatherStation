@@ -18,13 +18,22 @@ This repository contains only the firmware. The aggregation backend and ML train
 | Sensirion SHT41 | Temperature, Humidity | 0x44 |
 | Adafruit BMP280 | Barometric Pressure | 0x76 |
 
-**Indicator LEDs**:
-| Pin | Color | Meaning |
-|-----|-------|---------|
-| 2 | Blue | Ready / operating normally |
-| 4 | Red | Error / fault condition |
+**Indicator LED**:
+| Pin | Color |
+|-----|-------|
+| 2   | Green |
 
 **I2C Pins**: SDA → GPIO 21, SCL → GPIO 22
+
+## LED Status Patterns
+
+| Pattern | Meaning |
+|---------|---------|
+| Slow blink (500 ms on/off) | Booting |
+| Fast blink (150 ms on/off) | Connecting to Wi-Fi |
+| Brief pulse (100 ms) | Successful publish |
+| Double blink | Recoverable fault — Wi-Fi dropped or controller being reset after repeated failures |
+| Solid on | Unrecoverable error — controller failed to initialize; device will keep retrying |
 
 ## Getting Started
 
@@ -122,7 +131,7 @@ The codebase applies the **Template Method** pattern for sensor and publisher li
 
 ### Failure Handling
 
-The controller tracks consecutive failures. After **5 consecutive sampling or publishing failures**, the controller resets itself. The red LED lights whenever the station is in an error state.
+The controller tracks consecutive failures. After **5 consecutive sampling or publishing failures**, the controller resets itself. A **double blink** indicates a recoverable fault (Wi-Fi drop or reset after repeated failures); a **solid-on** LED indicates an unrecoverable initialization error (device keeps retrying).
 
 ## Sensor Calibration
 
