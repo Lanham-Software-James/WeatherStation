@@ -8,7 +8,7 @@ TEST_CASE("ConfigLoader returns default station config")
     ConfigLoader loader;
     StationConfig config = loader.load();
 
-    CHECK(std::strcmp(config.station_id, "station_001") == 0);
+    CHECK(std::strcmp(config.station_id, "station-001") == 0);
     REQUIRE(config.sensors.size() == 2);
 
     CHECK(config.sensors[0].type == SensorType::SHT41);
