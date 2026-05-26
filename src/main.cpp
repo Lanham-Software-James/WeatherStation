@@ -29,17 +29,17 @@ bool syncTime();
 void initializeHardware();
 bool initializeController();
 
-constexpr int GREEN_LED_PIN       = 2;
-constexpr int LED_SLOW_MS         = 500;
-constexpr int LED_FAST_MS         = 150;
-constexpr int LED_PULSE_MS        = 100;
-constexpr int LED_BLINK_MS        = 100;
-constexpr int SERIAL_BAUD_RATE    = 115200;
+constexpr int GREEN_LED_PIN = 2;
+constexpr int LED_SLOW_MS = 500;
+constexpr int LED_FAST_MS = 150;
+constexpr int LED_PULSE_MS = 100;
+constexpr int LED_BLINK_MS = 100;
+constexpr int SERIAL_BAUD_RATE = 115200;
 constexpr int ERROR_TICK_DELAY_MS = 2000;
-constexpr int NTP_POLL_DELAY_MS   = 500;
+constexpr int NTP_POLL_DELAY_MS = 500;
 constexpr unsigned long MAX_WIFI_WAIT_MS = 30000;
-constexpr unsigned long MAX_NTP_WAIT_MS  = 15000;
-constexpr int MAX_TICK_FAILURES   = 5;
+constexpr unsigned long MAX_NTP_WAIT_MS = 15000;
+constexpr int MAX_TICK_FAILURES = 5;
 
 static SerialLogger logger;
 static WiFiNetworkStatus network_status;
