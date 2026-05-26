@@ -3,7 +3,7 @@
 StationConfig ConfigLoader::load() const
 {
     StationConfig config{};
-    config.station_id = "station_001";
+    config.station_id = "station-001";
     config.sample_interval_ms = 10000;
     config.publish_interval_ms = 10000;
 
