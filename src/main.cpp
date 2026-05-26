@@ -9,10 +9,8 @@
 #include "sensors/adapters/SHT41Sensor.h"
 #include "sensors/adapters/BMP280Sensor.h"
 #include "config/Secrets.h"
-#include "publisher/PublisherFactory.h"
-#include "publisher/HttpPublisher.h"
-#include "publisher/adapters/WiFiNetworkStatus.h"
-#include "publisher/adapters/ArduinoHttpClientAdapter.h"
+#include "publisher/MqttPublisher.h"
+#include "publisher/adapters/PubSubClientAdapter.h"
 #include "logging/adapters/SerialLogger.h"
 #include "time/adapters/ArduinoClock.h"
 
@@ -42,8 +40,7 @@ constexpr unsigned long MAX_NTP_WAIT_MS = 15000;
 constexpr int MAX_TICK_FAILURES = 5;
 
 static SerialLogger logger;
-static WiFiNetworkStatus network_status;
-static ArduinoHttpClientAdapter http_client;
+static PubSubClientAdapter mqtt_client;
 static ArduinoClock clock_instance;
 static StationConfig station_config;
 static std::vector<Sensor*> sensors;
@@ -247,12 +244,14 @@ void initializeHardware()
     );
     sensors = sensor_factory.createSensors(station_config);
 
-    PublisherFactory publisher_factory(
-        [](const PublisherConfig& config) -> Publisher* {
-            return new HttpPublisher(HTTP_CONFIG.HTTP_ENDPOINT, &network_status, &http_client, &logger);
-        }
-    );
-    publishers = publisher_factory.createPublishers(station_config);
+    publishers.push_back(new MqttPublisher(
+        MQTT_CONFIG.BROKER_HOST,
+        MQTT_CONFIG.BROKER_PORT,
+        MQTT_CONFIG.CLIENT_ID,
+        MQTT_CONFIG.TOPIC,
+        &mqtt_client,
+        &logger
+    ));
 }
 
 bool initializeController()
