@@ -26,6 +26,7 @@ class WeatherStationController
 
         [[nodiscard]] int consecutivePublishFailures() const;
         [[nodiscard]] int consecutiveSampleFailures() const;
+        [[nodiscard]] int totalSuccessfulPublishes() const;
 
     private:
         bool sampleSensors();
@@ -48,6 +49,7 @@ class WeatherStationController
 
         int consecutive_publish_failures_{0};
         int consecutive_sample_failures_{0};
+        int total_successful_publishes_{0};
 
         Clock* clock_;
 };

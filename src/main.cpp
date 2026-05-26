@@ -17,19 +17,29 @@
 #include "time/adapters/ArduinoClock.h"
 
 void initializeLEDs();
+void ledOff();
+void ledOn();
+void ledSlowBlink(int count);
+void ledFastBlinkStep();
+void ledPulse();
+void ledDoubleBlink();
+void ledSolid();
 bool connectWifi();
 bool syncTime();
 void initializeHardware();
 bool initializeController();
 
-constexpr int BLUE_LED_PIN = 2;
-constexpr int RED_LED_PIN = 4;
-constexpr int SERIAL_BAUD_RATE = 115200;
+constexpr int GREEN_LED_PIN       = 2;
+constexpr int LED_SLOW_MS         = 500;
+constexpr int LED_FAST_MS         = 150;
+constexpr int LED_PULSE_MS        = 100;
+constexpr int LED_BLINK_MS        = 100;
+constexpr int SERIAL_BAUD_RATE    = 115200;
 constexpr int ERROR_TICK_DELAY_MS = 2000;
-constexpr int WAITING_DELAY_MS = 500;
+constexpr int NTP_POLL_DELAY_MS   = 500;
 constexpr unsigned long MAX_WIFI_WAIT_MS = 30000;
-constexpr unsigned long MAX_NTP_WAIT_MS = 15000;
-constexpr int MAX_TICK_FAILURES = 5;
+constexpr unsigned long MAX_NTP_WAIT_MS  = 15000;
+constexpr int MAX_TICK_FAILURES   = 5;
 
 static SerialLogger logger;
 static WiFiNetworkStatus network_status;
@@ -40,6 +50,7 @@ static std::vector<Sensor*> sensors;
 static std::vector<Publisher*> publishers;
 
 WeatherStationController* controller = nullptr;
+static int prev_publish_count = 0;
 
 void setup()
 {
@@ -55,6 +66,8 @@ void setup()
 
     if (!initializeController())
         logger.println("Controller initialization failed; will retry in loop.");
+    else
+        prev_publish_count = controller->totalSuccessfulPublishes();
 }
 
 void loop()
@@ -62,8 +75,7 @@ void loop()
     if (WiFi.status() != WL_CONNECTED)
     {
         logger.println("WiFi disconnected; attempting reconnect...");
-        digitalWrite(RED_LED_PIN, HIGH);
-        digitalWrite(BLUE_LED_PIN, LOW);
+        ledDoubleBlink();
 
         if (!connectWifi())
         {
@@ -84,11 +96,19 @@ void loop()
             delay(ERROR_TICK_DELAY_MS);
             return;
         }
+        prev_publish_count = controller->totalSuccessfulPublishes();
     }
 
     controller->tick();
 
-    const int pub_failures = controller->consecutivePublishFailures();
+    const int cur_publish_count = controller->totalSuccessfulPublishes();
+    if (cur_publish_count > prev_publish_count)
+    {
+        ledPulse();
+        prev_publish_count = cur_publish_count;
+    }
+
+    const int pub_failures    = controller->consecutivePublishFailures();
     const int sample_failures = controller->consecutiveSampleFailures();
 
     if (pub_failures >= MAX_TICK_FAILURES)
@@ -96,10 +116,9 @@ void loop()
         logger.print("Consecutive publish failures: ");
         logger.print(pub_failures);
         logger.println("; resetting controller.");
+        ledDoubleBlink();
         delete controller;
         controller = nullptr;
-        digitalWrite(RED_LED_PIN, HIGH);
-        digitalWrite(BLUE_LED_PIN, LOW);
         delay(ERROR_TICK_DELAY_MS);
         return;
     }
@@ -109,10 +128,9 @@ void loop()
         logger.print("Consecutive sample failures: ");
         logger.print(sample_failures);
         logger.println("; resetting controller.");
+        ledDoubleBlink();
         delete controller;
         controller = nullptr;
-        digitalWrite(RED_LED_PIN, HIGH);
-        digitalWrite(BLUE_LED_PIN, LOW);
         delay(ERROR_TICK_DELAY_MS);
         return;
     }
@@ -120,12 +138,51 @@ void loop()
 
 void initializeLEDs()
 {
-    pinMode(RED_LED_PIN, OUTPUT);
-    pinMode(BLUE_LED_PIN, OUTPUT);
-
-    digitalWrite(RED_LED_PIN, HIGH);
-    digitalWrite(BLUE_LED_PIN, LOW);
+    pinMode(GREEN_LED_PIN, OUTPUT);
+    ledSlowBlink(3);
 }
+
+void ledOff()  { digitalWrite(GREEN_LED_PIN, LOW); }
+void ledOn()   { digitalWrite(GREEN_LED_PIN, HIGH); }
+
+void ledSlowBlink(int count)
+{
+    for (int i = 0; i < count; i++)
+    {
+        ledOn();
+        delay(LED_SLOW_MS);
+        ledOff();
+        delay(LED_SLOW_MS);
+    }
+}
+
+void ledFastBlinkStep()
+{
+    ledOn();
+    delay(LED_FAST_MS);
+    ledOff();
+    delay(LED_FAST_MS);
+}
+
+void ledPulse()
+{
+    ledOn();
+    delay(LED_PULSE_MS);
+    ledOff();
+}
+
+void ledDoubleBlink()
+{
+    for (int i = 0; i < 2; i++)
+    {
+        ledOn();
+        delay(LED_BLINK_MS);
+        ledOff();
+        delay(LED_BLINK_MS);
+    }
+}
+
+void ledSolid() { ledOn(); }
 
 bool connectWifi()
 {
@@ -137,14 +194,16 @@ bool connectWifi()
     {
         if (millis() - start_ms >= MAX_WIFI_WAIT_MS)
         {
+            ledOff();
             logger.println("");
             logger.println("WiFi connection timed out.");
             return false;
         }
-        delay(WAITING_DELAY_MS);
+        ledFastBlinkStep();
         logger.print(".");
     }
 
+    ledOff();
     logger.println("");
     logger.println("WiFi connected.");
     return true;
@@ -165,7 +224,7 @@ bool syncTime()
             logger.println("NTP sync timed out.");
             return false;
         }
-        delay(WAITING_DELAY_MS);
+        delay(NTP_POLL_DELAY_MS);
         logger.print(".");
         now = time(nullptr);
     }
@@ -216,10 +275,10 @@ bool initializeController()
         logger.println("Controller failed to initialize.");
         delete controller;
         controller = nullptr;
+        ledSolid();
         return false;
     }
 
-    digitalWrite(RED_LED_PIN, LOW);
-    digitalWrite(BLUE_LED_PIN, HIGH);
+    ledOff();
     return true;
 }

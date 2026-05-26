@@ -122,6 +122,11 @@ int WeatherStationController::consecutiveSampleFailures() const
     return consecutive_sample_failures_;
 }
 
+int WeatherStationController::totalSuccessfulPublishes() const
+{
+    return total_successful_publishes_;
+}
+
 bool WeatherStationController::tick()
 {
     const unsigned long now_ms = clock_->millis();
@@ -202,6 +207,7 @@ bool WeatherStationController::publishBatch()
     }
 
     consecutive_publish_failures_ = 0;
+    total_successful_publishes_++;
 
     logger_->println("Batch observation published successfully.");
     logger_->print("Published sample count: ");
