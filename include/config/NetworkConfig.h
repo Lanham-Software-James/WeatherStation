@@ -1,7 +1,9 @@
 #pragma once
 
+#include <string>
+
 struct NetworkConfig
 {
-    const char* WIFI_SSID = "CHANGE_ME";
-    const char* WIFI_PASSWORD = "CHANGE_ME";
+    std::string WIFI_SSID{"CHANGE_ME"};
+    std::string WIFI_PASSWORD{"CHANGE_ME"};
 };

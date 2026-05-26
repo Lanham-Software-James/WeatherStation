@@ -49,6 +49,8 @@ __pycache__/
 .env
 .env.local
 secrets.h
+data/secrets.json
+data/config.json
 
 # =========================
 # PlatformIO library build artifacts

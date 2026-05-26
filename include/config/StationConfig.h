@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <cstdint>
+#include <string>
 
 enum class SensorType
 {
@@ -12,7 +13,7 @@ enum class SensorType
 struct SensorConfig
 {
     SensorType type;
-    const char* id;
+    std::string id;
     bool enabled{true};
     int sda_pin{21};
     int scl_pin{22};
@@ -25,7 +26,7 @@ struct SensorConfig
 
 struct StationConfig
 {
-    const char* station_id{"default_station"};
+    std::string station_id{"default_station"};
     unsigned long sample_interval_ms{10000};
     unsigned long publish_interval_ms{60000};
     std::vector<SensorConfig> sensors;
