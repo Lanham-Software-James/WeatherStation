@@ -4,7 +4,7 @@ ESP32-based weather station firmware — the data collection layer of a hyper-lo
 
 ## Overview
 
-Each station reads temperature, humidity, and barometric pressure at regular intervals and publishes batches of observations over HTTP to a central aggregation endpoint. Several stations distributed across a geographic area form the sensor network; the collected data is used to train models that predict weather conditions specific to that locale.
+Each station reads temperature, humidity, and barometric pressure at regular intervals and publishes batches of observations over MQTT to a broker. Several stations distributed across a geographic area form the sensor network; the collected data is used to train models that predict weather conditions specific to that locale.
 
 This repository contains only the firmware. The aggregation backend and ML training pipeline are separate components of the broader system.
 
@@ -44,20 +44,59 @@ This repository contains only the firmware. The aggregation backend and ML train
 
 ### Configuration
 
-Before building, create `include/config/Secrets.h` with your network credentials and endpoint:
+Configuration is stored in two JSON files on the ESP32's LittleFS filesystem. Copy the examples and fill in your values:
 
-```cpp
-#pragma once
-
-// WiFi
-const char* WIFI_SSID     = "your-ssid";
-const char* WIFI_PASSWORD = "your-password";
-
-// Data aggregation endpoint
-const char* HTTP_ENDPOINT = "http://your-aggregator/observations";
+```bash
+cp data/config.json.example data/config.json
+cp data/secrets.json.example data/secrets.json
 ```
 
-This file is excluded from version control (`.gitignore`).
+**`data/config.json`** — non-secret station settings:
+
+```json
+{
+    "station_id": "station_001",
+    "sample_interval_ms": 10000,
+    "publish_interval_ms": 60000,
+    "mqtt": {
+        "broker_host": "your-broker-host",
+        "broker_port": 1883,
+        "topic": "weather/station_001/telemetry"
+    },
+    "sensors": [
+        {
+            "type": "SHT41",
+            "id": "sht41_main",
+            "enabled": true,
+            "sda_pin": 21,
+            "scl_pin": 22,
+            "i2c_address": 68,
+            "temperature_offset_c": 0.0,
+            "humidity_offset_pct": 0.0
+        },
+        {
+            "type": "BMP280",
+            "id": "bmp280_main",
+            "enabled": true,
+            "sda_pin": 21,
+            "scl_pin": 22,
+            "i2c_address": 118,
+            "pressure_offset_hpa": 0.0
+        }
+    ]
+}
+```
+
+**`data/secrets.json`** — WiFi credentials:
+
+```json
+{
+    "wifi_ssid": "your-ssid",
+    "wifi_password": "your-password"
+}
+```
+
+Both files are excluded from version control (`.gitignore`). The `*.example` files are safe to commit and serve as templates.
 
 ### Build and Flash
 
@@ -65,12 +104,20 @@ This file is excluded from version control (`.gitignore`).
 # Build firmware for ESP32
 pio run -e esp32dev
 
-# Build, flash, and open serial monitor in one step
-pio run -e esp32dev --target upload && pio device monitor -e esp32dev
+# Flash config files to LittleFS (required on first flash or after config changes)
+pio run -e esp32dev --target uploadfs
+
+# Flash firmware
+pio run -e esp32dev --target upload
+
+# Flash filesystem + firmware, then open serial monitor
+pio run -e esp32dev --target uploadfs && pio run -e esp32dev --target upload && pio device monitor -e esp32dev
 
 # Serial monitor only (115200 baud)
 pio device monitor -e esp32dev
 ```
+
+> **Note:** `uploadfs` must be run at least once to provision `config.json` and `secrets.json` onto the device. After that, only re-run it when you change those files.
 
 ### Run Tests
 
@@ -91,10 +138,10 @@ Sensors (10s interval)
 Observation Buffer
    │
    ▼ (every 60s)
-HTTP Publisher ──► Aggregation Endpoint
+MQTT Publisher ──► MQTT Broker
 ```
 
-The controller samples all enabled sensors every **10 seconds**, accumulating `Observation` records in memory. Every **60 seconds** it serializes the buffered batch to JSON and POSTs it to the configured endpoint. This batching strategy reduces network overhead while preserving per-sample timestamps.
+The controller samples all enabled sensors every **10 seconds** (configurable via `sample_interval_ms`), accumulating `Observation` records in memory. Every **60 seconds** (configurable via `publish_interval_ms`) it serializes the buffered batch to JSON and publishes it to the configured MQTT topic. This batching strategy reduces network overhead while preserving per-sample timestamps.
 
 ### Observation Payload
 
@@ -121,10 +168,11 @@ All timestamps are UTC ISO 8601, synchronized at boot via NTP (`pool.ntp.org`).
 |-----------|-------------|
 | `WeatherStationController` | Central orchestrator — manages sampling/publishing intervals, observation buffer, and failure recovery |
 | `Sensor` | Abstract base; subclasses implement hardware-specific I2C reads |
-| `Publisher` | Abstract base; subclasses implement delivery (currently HTTP) |
+| `Publisher` | Abstract base; subclasses implement delivery (currently MQTT via `MqttPublisher`) |
 | `SensorFactory` / `PublisherFactory` | Create component instances via injected factory functions for testability |
 | `ObservationSerializer` | Converts `ObservationBatch` structs to JSON |
-| `ConfigLoader` | Loads station ID, intervals, sensor configuration, and per-sensor calibration offsets |
+| `ConfigLoader` | Reads `config.json` and `secrets.json` from LittleFS; populates station ID, intervals, MQTT settings, sensor configuration, and per-sensor calibration offsets |
+| `IFileSystem` / `LittleFSAdapter` / `NativeFileAdapter` | Filesystem abstraction; LittleFS for device, native file I/O for tests |
 | `Logger` / `Clock` | Platform abstractions that allow hardware-free unit testing |
 
 The codebase applies the **Template Method** pattern for sensor and publisher lifecycles, and uses **dependency injection** via factory function pointers to decouple component creation from component use — both patterns are critical for the native-platform test suite.
@@ -135,25 +183,42 @@ The controller tracks consecutive failures. After **5 consecutive sampling or pu
 
 ## Sensor Calibration
 
-Each sensor entry in the configuration supports measurement offsets for field calibration:
+Each sensor entry in `config.json` supports measurement offsets for field calibration:
 
-```cpp
-SensorConfig{
-    .type            = SensorType::SHT41,
-    .sda_pin         = 21,
-    .scl_pin         = 22,
-    .i2c_address     = 0x44,
-    .enabled         = true,
-    .temp_offset     = -0.5f,   // degrees C
-    .humidity_offset = 1.2f,    // percent RH
-    .pressure_offset = 0.0f,    // hPa
+```json
+{
+    "type": "SHT41",
+    "id": "sht41_main",
+    "enabled": true,
+    "sda_pin": 21,
+    "scl_pin": 22,
+    "i2c_address": 68,
+    "temperature_offset_c": -0.5,
+    "humidity_offset_pct": 1.2
 }
 ```
+
+```json
+{
+    "type": "BMP280",
+    "id": "bmp280_main",
+    "enabled": true,
+    "sda_pin": 21,
+    "scl_pin": 22,
+    "i2c_address": 118,
+    "pressure_offset_hpa": 0.0
+}
+```
+
+After editing offsets, re-flash the filesystem with `pio run -e esp32dev --target uploadfs`.
 
 ## Project Structure
 
 ```
 weather-station/
+├── data/
+│   ├── config.json.example         # Station/MQTT/sensor config template
+│   └── secrets.json.example        # WiFi credentials template
 ├── src/
 │   ├── main.cpp                    # ESP32 entry point (WiFi, NTP, main loop)
 │   ├── controller/                 # WeatherStationController
@@ -162,7 +227,8 @@ weather-station/
 │   │   └── adapters/               # SHT41, BMP280 drivers
 │   ├── publisher/
 │   │   ├── Publisher.cpp           # Abstract base
-│   │   └── adapters/               # HttpPublisher
+│   │   └── adapters/               # MqttPublisher (PubSubClient adapter)
+│   ├── filesystem/                 # IFileSystem, LittleFSAdapter, NativeFileAdapter
 │   ├── config/                     # ConfigLoader, config structs
 │   ├── serialization/              # ObservationSerializer
 │   ├── logging/                    # Logger abstraction + SerialLogger
@@ -171,7 +237,6 @@ weather-station/
 ├── test/
 │   ├── mocks/                      # Mock implementations for all interfaces
 │   └── test_*/                     # Unit test suites (doctest)
-├── test_endpoint/                  # Local HTTP endpoint for manual testing
 └── platformio.ini                  # Build configuration (esp32dev + native)
 ```
 
@@ -185,6 +250,8 @@ GitHub Actions runs the native test suite on every push and pull request to `mai
 |---------|---------|
 | [Adafruit BMP280](https://github.com/adafruit/Adafruit_BMP280_Library) | BMP280 pressure sensor driver |
 | [Sensirion I2C SHT4x](https://github.com/Sensirion/arduino-i2c-sht4x) | SHT41 temperature/humidity driver |
+| [PubSubClient](https://github.com/knolleary/pubsubclient) | MQTT client for publishing observations |
+| [ArduinoJson](https://arduinojson.org/) | JSON parsing for file-based configuration |
 | [doctest](https://github.com/doctest/doctest) | Header-only unit testing (native tests only) |
 
 ## Related Components
@@ -192,5 +259,5 @@ GitHub Actions runs the native test suite on every push and pull request to `mai
 This firmware is one part of a larger hyper-localized weather prediction system:
 
 - **Weather Station** ← you are here — sensor firmware for ESP32
-- **Aggregation Backend** — collects observation batches from all stations
+- **[Aggregation Backend](https://github.com/Lanham-Software-James/WeatherStationDataPipeline)** — collects observation batches from all stations
 - **ML Pipeline** — trains forecasting models on the aggregated multi-station dataset
