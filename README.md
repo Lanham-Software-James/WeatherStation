@@ -23,7 +23,7 @@ This repository contains only the firmware. The aggregation backend and ML train
 |-----|-------|
 | 2   | Green |
 
-**I2C Pins**: SDA → GPIO 21, SCL → GPIO 22
+**I2C Pins**: SCL → GPIO 21, SDA → GPIO 22
 
 ## LED Status Patterns
 
