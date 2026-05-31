@@ -96,6 +96,21 @@ TEST_CASE("ConfigLoader returns led_pin from JSON")
     CHECK(config.station.led_pin == 4);
 }
 
+TEST_CASE("ConfigLoader led_pin overrides firmware default of 2")
+{
+    // Regression: initializeLEDs() must use the config pin, not the hardcoded
+    // default (2). This test ensures the loaded pin differs from 2 so that
+    // any breakage in led_pin parsing produces a wrong-pin failure.
+    StringFileSystem fs;
+    fs.add("config.json", CONFIG_JSON);
+
+    ConfigLoader loader(fs);
+    AppConfig config = loader.load();
+
+    CHECK(config.station.led_pin != 2);
+    CHECK(config.station.led_pin == 4);
+}
+
 TEST_CASE("ConfigLoader uses default led_pin when not specified")
 {
     static const char* CONFIG_NO_LED = R"({
