@@ -31,6 +31,7 @@ TEST_CASE("ObservationSerializer serializes a complete batch to JSON")
     ObservationBatch batch{};
     batch.station_id = "home_ref";
     batch.sent_at = 1700000060;
+    batch.rssi_dbm = -65;
     batch.samples.push_back(makeObservation("home_ref", 1700000000, 21.52f, 48.10f, 1012.32f));
     batch.samples.push_back(makeObservation("home_ref", 1700000010, 21.60f, 48.00f, 1012.28f));
 
@@ -40,6 +41,7 @@ TEST_CASE("ObservationSerializer serializes a complete batch to JSON")
 
     CHECK(std::strstr(json, "\"station_id\":\"home_ref\"") != nullptr);
     CHECK(std::strstr(json, "\"sent_at\":\"") != nullptr);
+    CHECK(std::strstr(json, "\"rssi_dbm\":-65") != nullptr);
     CHECK(std::strstr(json, "\"samples\":[") != nullptr);
     CHECK(std::strstr(json, "\"ts\":\"") != nullptr);
     CHECK(std::strstr(json, "\"temperature_c\":21.52") != nullptr);
@@ -82,6 +84,7 @@ TEST_CASE("ObservationSerializer includes all expected JSON keys for batch")
     ObservationBatch batch{};
     batch.station_id = "station_b";
     batch.sent_at = 1700000060;
+    batch.rssi_dbm = -72;
     batch.samples.push_back(makeObservation("station_b", 2000, 25.0f, 50.0f, 1013.25f));
 
     const char* json = ObservationSerializer::toJson(batch);
@@ -90,11 +93,39 @@ TEST_CASE("ObservationSerializer includes all expected JSON keys for batch")
 
     CHECK(std::strstr(json, "\"station_id\"") != nullptr);
     CHECK(std::strstr(json, "\"sent_at\"") != nullptr);
+    CHECK(std::strstr(json, "\"rssi_dbm\"") != nullptr);
     CHECK(std::strstr(json, "\"samples\"") != nullptr);
     CHECK(std::strstr(json, "\"ts\"") != nullptr);
     CHECK(std::strstr(json, "\"temperature_c\"") != nullptr);
     CHECK(std::strstr(json, "\"humidity_pct\"") != nullptr);
     CHECK(std::strstr(json, "\"pressure_hpa\"") != nullptr);
+}
+
+TEST_CASE("ObservationSerializer serializes rssi_dbm correctly")
+{
+    ObservationBatch batch{};
+    batch.station_id = "station_rssi";
+    batch.sent_at = 1700000060;
+    batch.rssi_dbm = -85;
+    batch.samples.push_back(makeObservation("station_rssi", 1700000000, 20.0f, 50.0f, 1013.0f));
+
+    const char* json = ObservationSerializer::toJson(batch);
+
+    REQUIRE(json != nullptr);
+    CHECK(std::strstr(json, "\"rssi_dbm\":-85") != nullptr);
+}
+
+TEST_CASE("ObservationSerializer serializes zero rssi_dbm when not set")
+{
+    ObservationBatch batch{};
+    batch.station_id = "station_rssi_zero";
+    batch.sent_at = 1700000060;
+    batch.samples.push_back(makeObservation("station_rssi_zero", 1700000000, 20.0f, 50.0f, 1013.0f));
+
+    const char* json = ObservationSerializer::toJson(batch);
+
+    REQUIRE(json != nullptr);
+    CHECK(std::strstr(json, "\"rssi_dbm\":0") != nullptr);
 }
 
 TEST_CASE("ObservationSerializer reuses a stable buffer for consecutive calls")
@@ -186,6 +217,55 @@ TEST_CASE("ObservationSerializer returns empty object when payload exceeds buffe
 
     REQUIRE(json != nullptr);
     CHECK(std::string(json) == "{}");
+}
+
+TEST_CASE("ObservationSerializer serializes positive rssi_dbm")
+{
+    ObservationBatch batch{};
+    batch.station_id = "station_rssi_pos";
+    batch.sent_at = 1700000060;
+    batch.rssi_dbm = 10;
+    batch.samples.push_back(makeObservation("station_rssi_pos", 1700000000, 20.0f, 50.0f, 1013.0f));
+
+    const char* json = ObservationSerializer::toJson(batch);
+
+    REQUIRE(json != nullptr);
+    CHECK(std::strstr(json, "\"rssi_dbm\":10") != nullptr);
+}
+
+TEST_CASE("ObservationSerializer serializes weak signal rssi_dbm boundary")
+{
+    ObservationBatch batch{};
+    batch.station_id = "station_rssi_weak";
+    batch.sent_at = 1700000060;
+    batch.rssi_dbm = -100;
+    batch.samples.push_back(makeObservation("station_rssi_weak", 1700000000, 20.0f, 50.0f, 1013.0f));
+
+    const char* json = ObservationSerializer::toJson(batch);
+
+    REQUIRE(json != nullptr);
+    CHECK(std::strstr(json, "\"rssi_dbm\":-100") != nullptr);
+}
+
+TEST_CASE("ObservationSerializer places rssi_dbm before samples array")
+{
+    ObservationBatch batch{};
+    batch.station_id = "station_order";
+    batch.sent_at = 1700000060;
+    batch.rssi_dbm = -60;
+    batch.samples.push_back(makeObservation("station_order", 1700000000, 20.0f, 50.0f, 1013.0f));
+
+    const char* json = ObservationSerializer::toJson(batch);
+
+    REQUIRE(json != nullptr);
+
+    const std::string text = json;
+    const std::size_t rssi_pos    = text.find("\"rssi_dbm\"");
+    const std::size_t samples_pos = text.find("\"samples\"");
+
+    REQUIRE(rssi_pos != std::string::npos);
+    REQUIRE(samples_pos != std::string::npos);
+    CHECK(rssi_pos < samples_pos);
 }
 
 TEST_CASE("ObservationSerializer serializes negative values correctly")

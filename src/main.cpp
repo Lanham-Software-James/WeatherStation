@@ -14,6 +14,7 @@
 #include "publisher/adapters/PubSubClientAdapter.h"
 #include "logging/adapters/SerialLogger.h"
 #include "time/adapters/ArduinoClock.h"
+#include "network/adapters/WiFiNetworkInfo.h"
 
 void initializeLEDs();
 void ledOff();
@@ -47,6 +48,7 @@ static ArduinoClock clock_instance;
 static AppConfig app_config;
 static std::vector<Sensor*> sensors;
 static MqttPublisher* publisher = nullptr;
+static WiFiNetworkInfo wifi_network_info;
 
 WeatherStationController* controller = nullptr;
 static int prev_publish_count = 0;
@@ -277,7 +279,8 @@ bool initializeController()
         sensors,
         publisher,
         &logger,
-        &clock_instance
+        &clock_instance,
+        &wifi_network_info
     );
 
     if (!controller->initialize())
