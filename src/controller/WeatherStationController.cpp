@@ -7,14 +7,14 @@ WeatherStationController::WeatherStationController(
     unsigned long sample_interval_ms,
     unsigned long publish_interval_ms,
     const std::vector<Sensor*>& sensors,
-    const std::vector<Publisher*>& publishers,
+    Publisher* publisher,
     Logger* logger,
     Clock* clock)
     : station_id_(station_id),
       sample_interval_ms_(sample_interval_ms),
       publish_interval_ms_(publish_interval_ms),
       sensors_(sensors),
-      publishers_(publishers),
+      publisher_(publisher),
       logger_(logger),
       clock_(clock)
 {
@@ -51,9 +51,9 @@ bool WeatherStationController::initialize()
         return false;
     }
 
-    if (publishers_.empty())
+    if (publisher_ == nullptr)
     {
-        logger_->println("Controller init failed: no publishers provided.");
+        logger_->println("Controller init failed: publisher is null.");
         return false;
     }
 
@@ -82,23 +82,14 @@ bool WeatherStationController::initialize()
         }
     }
 
-    for (Publisher* publisher : publishers_)
+    logger_->print("Initializing publisher: ");
+    logger_->println(publisher_->getName());
+
+    if (!publisher_->initialize())
     {
-        if (publisher == nullptr)
-        {
-            logger_->println("Controller init failed: null publisher.");
-            return false;
-        }
-
-        logger_->print("Initializing publisher: ");
-        logger_->println(publisher->getName());
-
-        if (!publisher->initialize())
-        {
-            logger_->print("Failed to initialize publisher: ");
-            logger_->println(publisher->getName());
-            return false;
-        }
+        logger_->print("Failed to initialize publisher: ");
+        logger_->println(publisher_->getName());
+        return false;
     }
 
     const unsigned long now_ms = clock_->millis();
@@ -195,15 +186,12 @@ bool WeatherStationController::publishBatch()
     batch.sent_at = clock_->now();
     batch.samples = buffered_samples_;
 
-    for (Publisher* publisher : publishers_)
+    if (!publisher_->publish(batch))
     {
-        if (!publisher->publish(batch))
-        {
-            logger_->print("Failed to publish batch with publisher: ");
-            logger_->println(publisher->getName());
-            consecutive_publish_failures_++;
-            return false;
-        }
+        logger_->print("Failed to publish batch with publisher: ");
+        logger_->println(publisher_->getName());
+        consecutive_publish_failures_++;
+        return false;
     }
 
     consecutive_publish_failures_ = 0;

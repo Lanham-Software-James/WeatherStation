@@ -46,7 +46,7 @@ static PubSubClientAdapter mqtt_client;
 static ArduinoClock clock_instance;
 static AppConfig app_config;
 static std::vector<Sensor*> sensors;
-static std::vector<Publisher*> publishers;
+static MqttPublisher* publisher = nullptr;
 
 WeatherStationController* controller = nullptr;
 static int prev_publish_count = 0;
@@ -255,14 +255,14 @@ void initializeHardware()
     );
     sensors = sensor_factory.createSensors(app_config.station);
 
-    publishers.push_back(new MqttPublisher(
+    publisher = new MqttPublisher(
         app_config.mqtt.BROKER_HOST.c_str(),
         app_config.mqtt.BROKER_PORT,
         app_config.mqtt.CLIENT_ID.c_str(),
         app_config.mqtt.TOPIC.c_str(),
         &mqtt_client,
         &logger
-    ));
+    );
 }
 
 bool initializeController()
@@ -275,7 +275,7 @@ bool initializeController()
         app_config.station.sample_interval_ms,
         app_config.station.publish_interval_ms,
         sensors,
-        publishers,
+        publisher,
         &logger,
         &clock_instance
     );

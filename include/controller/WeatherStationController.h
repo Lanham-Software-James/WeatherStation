@@ -17,7 +17,7 @@ class WeatherStationController
             unsigned long sample_interval_ms,
             unsigned long publish_interval_ms,
             const std::vector<Sensor*>& sensors,
-            const std::vector<Publisher*>& publishers,
+            Publisher* publisher,
             Logger* logger,
             Clock* clock);
 
@@ -37,7 +37,7 @@ class WeatherStationController
         unsigned long publish_interval_ms_;
 
         std::vector<Sensor*> sensors_;
-        std::vector<Publisher*> publishers_;
+        Publisher* publisher_;
         Logger* logger_;
 
         std::uint32_t sequence_number_{0};
