@@ -28,6 +28,7 @@ static const char* CONFIG_JSON = R"({
     "station_id": "station-001",
     "sample_interval_ms": 10000,
     "publish_interval_ms": 10000,
+    "led_pin": 4,
     "mqtt": {
         "broker_host": "192.168.0.50",
         "broker_port": 1883,
@@ -82,6 +83,40 @@ TEST_CASE("ConfigLoader returns correct sample and publish intervals")
 
     CHECK(config.station.sample_interval_ms == 10000);
     CHECK(config.station.publish_interval_ms == 10000);
+}
+
+TEST_CASE("ConfigLoader returns led_pin from JSON")
+{
+    StringFileSystem fs;
+    fs.add("config.json", CONFIG_JSON);
+
+    ConfigLoader loader(fs);
+    AppConfig config = loader.load();
+
+    CHECK(config.station.led_pin == 4);
+}
+
+TEST_CASE("ConfigLoader uses default led_pin when not specified")
+{
+    static const char* CONFIG_NO_LED = R"({
+        "station_id": "station-001",
+        "sample_interval_ms": 10000,
+        "publish_interval_ms": 10000,
+        "mqtt": {
+            "broker_host": "192.168.0.50",
+            "broker_port": 1883,
+            "topic": "weather/station-001/telemetry"
+        },
+        "sensors": []
+    })";
+
+    StringFileSystem fs;
+    fs.add("config.json", CONFIG_NO_LED);
+
+    ConfigLoader loader(fs);
+    AppConfig config = loader.load();
+
+    CHECK(config.station.led_pin == 2);
 }
 
 TEST_CASE("ConfigLoader returns sensor configuration details")

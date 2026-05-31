@@ -29,5 +29,6 @@ struct StationConfig
     std::string station_id{"default_station"};
     unsigned long sample_interval_ms{10000};
     unsigned long publish_interval_ms{60000};
+    int led_pin{2};
     std::vector<SensorConfig> sensors;
 };

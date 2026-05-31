@@ -18,10 +18,7 @@ This repository contains only the firmware. The aggregation backend and ML train
 | Sensirion SHT41 | Temperature, Humidity | 0x44 |
 | Adafruit BMP280 | Barometric Pressure | 0x76 |
 
-**Indicator LED**:
-| Pin | Color |
-|-----|-------|
-| 2   | Green |
+**Indicator LED**: Configurable via `led_pin` in `config.json` (default: GPIO 2, green)
 
 **I2C Pins**: SCL → GPIO 21, SDA → GPIO 22
 
@@ -58,6 +55,7 @@ cp data/secrets.json.example data/secrets.json
     "station_id": "station_001",
     "sample_interval_ms": 10000,
     "publish_interval_ms": 60000,
+    "led_pin": 2,
     "mqtt": {
         "broker_host": "your-broker-host",
         "broker_port": 1883,
