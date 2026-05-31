@@ -4,7 +4,7 @@ ESP32-based weather station firmware — the data collection layer of a hyper-lo
 
 ## Overview
 
-Each station reads temperature, humidity, and barometric pressure at regular intervals and publishes batches of observations over MQTT to a broker. Several stations distributed across a geographic area form the sensor network; the collected data is used to train models that predict weather conditions specific to that locale.
+Each station reads temperature, humidity, and barometric pressure at regular intervals and publishes batches of observations — including Wi-Fi signal strength — over MQTT to a broker. Several stations distributed across a geographic area form the sensor network; the collected data is used to train models that predict weather conditions specific to that locale.
 
 This repository contains only the firmware. The aggregation backend and ML training pipeline are separate components of the broader system.
 
@@ -147,6 +147,7 @@ The controller samples all enabled sensors every **10 seconds** (configurable vi
 {
   "station_id": "station_001",
   "sent_at": "2023-11-14T16:01:00Z",
+  "rssi_dbm": -65,
   "samples": [
     {
       "ts": "2023-11-14T16:00:00Z",
@@ -158,7 +159,7 @@ The controller samples all enabled sensors every **10 seconds** (configurable vi
 }
 ```
 
-All timestamps are UTC ISO 8601, synchronized at boot via NTP (`pool.ntp.org`).
+`rssi_dbm` is the Wi-Fi received signal strength at the moment the batch is published (not at sample time). All timestamps are UTC ISO 8601, synchronized at boot via NTP (`pool.ntp.org`).
 
 ### Key Components
 
@@ -169,6 +170,7 @@ All timestamps are UTC ISO 8601, synchronized at boot via NTP (`pool.ntp.org`).
 | `Publisher` | Abstract base; subclasses implement delivery (currently MQTT via `MqttPublisher`) |
 | `SensorFactory` / `PublisherFactory` | Create component instances via injected factory functions for testability |
 | `ObservationSerializer` | Converts `ObservationBatch` structs to JSON |
+| `NetworkInfo` / `WiFiNetworkInfo` | Abstracts Wi-Fi RSSI retrieval; `WiFiNetworkInfo` calls `WiFi.RSSI()` at publish time |
 | `ConfigLoader` | Reads `config.json` and `secrets.json` from LittleFS; populates station ID, intervals, MQTT settings, sensor configuration, and per-sensor calibration offsets |
 | `IFileSystem` / `LittleFSAdapter` / `NativeFileAdapter` | Filesystem abstraction; LittleFS for device, native file I/O for tests |
 | `Logger` / `Clock` | Platform abstractions that allow hardware-free unit testing |
@@ -230,6 +232,7 @@ weather-station/
 │   ├── config/                     # ConfigLoader, config structs
 │   ├── serialization/              # ObservationSerializer
 │   ├── logging/                    # Logger abstraction + SerialLogger
+│   ├── network/                    # NetworkInfo abstraction + WiFiNetworkInfo
 │   └── time/                       # Clock abstraction + ArduinoClock
 ├── include/                        # Headers (mirrors src/ structure)
 ├── test/
