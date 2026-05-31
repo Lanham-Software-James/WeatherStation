@@ -16,14 +16,13 @@ TEST_CASE("Controller initialize fails when station_id is null")
     MockClock clock;
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         nullptr,
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -38,14 +37,13 @@ TEST_CASE("Controller initialize fails when logger is null")
     MockClock clock;
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         nullptr,
         &clock);
 
@@ -59,63 +57,18 @@ TEST_CASE("Controller initialize fails when no sensors are provided")
     MockClock clock;
 
     std::vector<Sensor*> sensors{};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
     CHECK(controller.initialize() == false);
     CHECK(logger.contains("no sensors provided"));
-}
-
-TEST_CASE("Controller initialize fails when no publishers are provided")
-{
-    MockSensor sensor;
-    MockLogger logger;
-    MockClock clock;
-
-    std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{};
-
-    WeatherStationController controller(
-        "station_001",
-        10000,
-        60000,
-        sensors,
-        publishers,
-        &logger,
-        &clock);
-
-    CHECK(controller.initialize() == false);
-    CHECK(logger.contains("no publishers provided"));
-}
-
-TEST_CASE("Controller initialize fails when sensor is null")
-{
-    MockPublisher publisher;
-    MockLogger logger;
-    MockClock clock;
-
-    std::vector<Sensor*> sensors{nullptr};
-    std::vector<Publisher*> publishers{&publisher};
-
-    WeatherStationController controller(
-        "station_001",
-        10000,
-        60000,
-        sensors,
-        publishers,
-        &logger,
-        &clock);
-
-    CHECK(controller.initialize() == false);
-    CHECK(logger.contains("null sensor"));
 }
 
 TEST_CASE("Controller initialize fails when publisher is null")
@@ -125,19 +78,39 @@ TEST_CASE("Controller initialize fails when publisher is null")
     MockClock clock;
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{nullptr};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        nullptr,
         &logger,
         &clock);
 
     CHECK(controller.initialize() == false);
-    CHECK(logger.contains("null publisher"));
+    CHECK(logger.contains("publisher is null"));
+}
+
+TEST_CASE("Controller initialize fails when sensor is null")
+{
+    MockPublisher publisher;
+    MockLogger logger;
+    MockClock clock;
+
+    std::vector<Sensor*> sensors{nullptr};
+
+    WeatherStationController controller(
+        "station_001",
+        10000,
+        60000,
+        sensors,
+        &publisher,
+        &logger,
+        &clock);
+
+    CHECK(controller.initialize() == false);
+    CHECK(logger.contains("null sensor"));
 }
 
 TEST_CASE("Controller initialize fails when sensor initialization fails")
@@ -150,14 +123,13 @@ TEST_CASE("Controller initialize fails when sensor initialization fails")
     MockClock clock;
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -176,14 +148,13 @@ TEST_CASE("Controller initialize fails when publisher initialization fails")
     MockClock clock;
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -202,14 +173,13 @@ TEST_CASE("Controller initialize succeeds with valid dependencies")
     clock.setMillis(5000);
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -229,14 +199,13 @@ TEST_CASE("Controller tick does nothing before sample interval elapses")
     clock.setNow(1700000000);
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -257,14 +226,13 @@ TEST_CASE("Controller samples once after sample interval elapses")
     clock.setNow(1700000000);
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -292,14 +260,13 @@ TEST_CASE("Controller publishes batch after publish interval elapses")
     clock.setNow(1700000000);
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -333,14 +300,13 @@ TEST_CASE("Controller tick fails when sensor read fails")
     clock.setMillis(0);
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -365,14 +331,13 @@ TEST_CASE("Controller tick fails when publisher publish fails")
     clock.setNow(1700000000);
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -398,14 +363,13 @@ TEST_CASE("Controller catches up on missed sample intervals")
     clock.setNow(1700000000);
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -428,14 +392,13 @@ TEST_CASE("Controller skips publishing when no samples have been collected")
     clock.setNow(1700000000);
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         100000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -457,14 +420,13 @@ TEST_CASE("Controller initialize fails when sample interval is zero")
     MockClock clock;
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         0,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -480,14 +442,13 @@ TEST_CASE("Controller initialize fails when publish interval is zero")
     MockClock clock;
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         0,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -502,14 +463,13 @@ TEST_CASE("Controller initialize fails when clock is null")
     MockLogger logger;
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         nullptr);
 
@@ -527,14 +487,13 @@ TEST_CASE("Controller initialize fails when second sensor fails to initialize")
     MockClock clock;
 
     std::vector<Sensor*> sensors{&sensor1, &sensor2};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -555,14 +514,13 @@ TEST_CASE("Controller tick fails when second sensor read fails")
     clock.setMillis(0);
 
     std::vector<Sensor*> sensors{&sensor1, &sensor2};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -576,43 +534,6 @@ TEST_CASE("Controller tick fails when second sensor read fails")
     CHECK(logger.contains("Failed to read sensor"));
 }
 
-TEST_CASE("Controller tick fails when second publisher publish fails")
-{
-    MockSensor sensor;
-    MockPublisher publisher1;
-    MockPublisher publisher2;
-    publisher2.publish_result = false;
-    MockLogger logger;
-    MockClock clock;
-    clock.setMillis(0);
-    clock.setNow(1700000000);
-
-    std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher1, &publisher2};
-
-    WeatherStationController controller(
-        "station_001",
-        10000,
-        60000,
-        sensors,
-        publishers,
-        &logger,
-        &clock);
-
-    REQUIRE(controller.initialize() == true);
-
-    for (int i = 0; i < 6; ++i)
-    {
-        clock.advanceMillis(10000);
-        clock.setNow(1700000000 + ((i + 1) * 10));
-    }
-
-    CHECK(controller.tick() == false);
-    CHECK(publisher1.on_publish_called == true);
-    CHECK(publisher2.on_publish_called == true);
-    CHECK(logger.contains("Failed to publish batch with publisher"));
-}
-
 TEST_CASE("Controller assigns incrementing sequence numbers to observations")
 {
     MockSensor sensor;
@@ -623,14 +544,13 @@ TEST_CASE("Controller assigns incrementing sequence numbers to observations")
     clock.setNow(1700000000);
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -660,14 +580,13 @@ TEST_CASE("Controller consecutive sample failure count starts at zero after init
     MockClock clock;
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -686,14 +605,13 @@ TEST_CASE("Controller consecutive sample failure count increments on successive 
     clock.setMillis(0);
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -718,14 +636,13 @@ TEST_CASE("Controller consecutive sample failure count resets after successful s
     clock.setMillis(0);
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -749,14 +666,13 @@ TEST_CASE("Controller consecutive publish failure count starts at zero after ini
     MockClock clock;
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -776,14 +692,13 @@ TEST_CASE("Controller consecutive publish failure count increments on successive
     clock.setNow(1700000000);
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
@@ -811,14 +726,13 @@ TEST_CASE("Controller consecutive publish failure count resets after successful 
     clock.setNow(1700000000);
 
     std::vector<Sensor*> sensors{&sensor};
-    std::vector<Publisher*> publishers{&publisher};
 
     WeatherStationController controller(
         "station_001",
         10000,
         60000,
         sensors,
-        publishers,
+        &publisher,
         &logger,
         &clock);
 
