@@ -55,11 +55,12 @@ static int prev_publish_count = 0;
 
 void setup()
 {
-    initializeLEDs();
     Serial.begin(SERIAL_BAUD_RATE);
 
     loadConfig();
     GREEN_LED_PIN = app_config.station.led_pin;
+
+    initializeLEDs();
 
     if (!connectWifi())
         logger.println("WiFi unavailable at startup; will retry in loop.");
