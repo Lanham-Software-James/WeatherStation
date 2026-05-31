@@ -2,6 +2,7 @@
     "station_id": "",
     "sample_interval_ms": ,
     "publish_interval_ms": ,
+    "led_pin": 2,
     "mqtt": {
         "broker_host": "",
         "broker_port": ,

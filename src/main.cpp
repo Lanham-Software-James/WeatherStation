@@ -29,7 +29,7 @@ bool syncTime();
 void initializeHardware();
 bool initializeController();
 
-constexpr int GREEN_LED_PIN = 2;
+static int GREEN_LED_PIN = 2;
 constexpr int LED_SLOW_MS = 500;
 constexpr int LED_FAST_MS = 150;
 constexpr int LED_PULSE_MS = 100;
@@ -57,6 +57,7 @@ void setup()
     Serial.begin(SERIAL_BAUD_RATE);
 
     loadConfig();
+    GREEN_LED_PIN = app_config.station.led_pin;
 
     if (!connectWifi())
         logger.println("WiFi unavailable at startup; will retry in loop.");

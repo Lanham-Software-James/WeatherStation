@@ -28,6 +28,8 @@ AppConfig ConfigLoader::load() const
                 config.station.sample_interval_ms = doc["sample_interval_ms"].as<unsigned long>();
             if (!doc["publish_interval_ms"].isNull())
                 config.station.publish_interval_ms = doc["publish_interval_ms"].as<unsigned long>();
+            if (!doc["led_pin"].isNull())
+                config.station.led_pin = doc["led_pin"].as<int>();
 
             JsonObject mqtt_obj = doc["mqtt"].as<JsonObject>();
             if (!mqtt_obj.isNull())
