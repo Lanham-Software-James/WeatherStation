@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "logging/Logger.h"
+#include "network/NetworkInfo.h"
 #include "publisher/Publisher.h"
 #include "sensors/Sensor.h"
 #include "model/ObservationBatch.h"
@@ -19,7 +20,8 @@ class WeatherStationController
             const std::vector<Sensor*>& sensors,
             Publisher* publisher,
             Logger* logger,
-            Clock* clock);
+            Clock* clock,
+            NetworkInfo* network_info = nullptr);
 
         bool initialize();
         bool tick();
@@ -39,6 +41,7 @@ class WeatherStationController
         std::vector<Sensor*> sensors_;
         Publisher* publisher_;
         Logger* logger_;
+        NetworkInfo* network_info_;
 
         std::uint32_t sequence_number_{0};
 

@@ -5,6 +5,7 @@
 #include "controller/WeatherStationController.h"
 #include "../test/mocks/MockClock.h"
 #include "../test/mocks/MockLogger.h"
+#include "../test/mocks/MockNetworkInfo.h"
 #include "../test/mocks/MockPublisher.h"
 #include "../test/mocks/MockSensor.h"
 
@@ -748,4 +749,174 @@ TEST_CASE("Controller consecutive publish failure count resets after successful 
     clock.setNow(1700000120);
     CHECK(controller.tick() == true);
     CHECK(controller.consecutivePublishFailures() == 0);
+}
+
+TEST_CASE("Controller populates rssi_dbm in published batch when network_info provided")
+{
+    MockSensor sensor;
+    MockPublisher publisher;
+    MockLogger logger;
+    MockClock clock;
+    MockNetworkInfo network_info;
+    network_info.rssi_to_return = -72;
+
+    clock.setMillis(0);
+    clock.setNow(1700000000);
+
+    std::vector<Sensor*> sensors{&sensor};
+
+    WeatherStationController controller(
+        "station_001",
+        10000,
+        60000,
+        sensors,
+        &publisher,
+        &logger,
+        &clock,
+        &network_info);
+
+    REQUIRE(controller.initialize() == true);
+
+    for (int i = 0; i < 6; ++i)
+    {
+        clock.advanceMillis(10000);
+        clock.setNow(1700000000 + ((i + 1) * 10));
+        REQUIRE(controller.tick() == true);
+    }
+
+    CHECK(publisher.on_publish_called == true);
+    CHECK(publisher.last_batch.rssi_dbm == -72);
+}
+
+TEST_CASE("Controller reads rssi_dbm at publish time not at sample time")
+{
+    MockSensor sensor;
+    MockPublisher publisher;
+    MockLogger logger;
+    MockClock clock;
+    MockNetworkInfo network_info;
+    network_info.rssi_to_return = -50;
+
+    clock.setMillis(0);
+    clock.setNow(1700000000);
+
+    std::vector<Sensor*> sensors{&sensor};
+
+    WeatherStationController controller(
+        "station_001",
+        10000,
+        60000,
+        sensors,
+        &publisher,
+        &logger,
+        &clock,
+        &network_info);
+
+    REQUIRE(controller.initialize() == true);
+
+    // Collect samples with RSSI at -50
+    for (int i = 0; i < 3; ++i)
+    {
+        clock.advanceMillis(10000);
+        clock.setNow(1700000000 + ((i + 1) * 10));
+        REQUIRE(controller.tick() == true);
+    }
+
+    // RSSI changes before publish
+    network_info.rssi_to_return = -88;
+
+    for (int i = 3; i < 6; ++i)
+    {
+        clock.advanceMillis(10000);
+        clock.setNow(1700000000 + ((i + 1) * 10));
+        REQUIRE(controller.tick() == true);
+    }
+
+    // Batch should carry the publish-time RSSI, not the sample-time value
+    CHECK(publisher.on_publish_called == true);
+    CHECK(publisher.last_batch.rssi_dbm == -88);
+}
+
+TEST_CASE("Controller reads rssi_dbm fresh on each publish cycle")
+{
+    MockSensor sensor;
+    MockPublisher publisher;
+    MockLogger logger;
+    MockClock clock;
+    MockNetworkInfo network_info;
+    network_info.rssi_to_return = -60;
+
+    clock.setMillis(0);
+    clock.setNow(1700000000);
+
+    std::vector<Sensor*> sensors{&sensor};
+
+    WeatherStationController controller(
+        "station_001",
+        10000,
+        60000,
+        sensors,
+        &publisher,
+        &logger,
+        &clock,
+        &network_info);
+
+    REQUIRE(controller.initialize() == true);
+
+    // First publish cycle
+    for (int i = 0; i < 6; ++i)
+    {
+        clock.advanceMillis(10000);
+        clock.setNow(1700000000 + ((i + 1) * 10));
+        REQUIRE(controller.tick() == true);
+    }
+
+    REQUIRE(publisher.on_publish_called == true);
+    CHECK(publisher.last_batch.rssi_dbm == -60);
+
+    // RSSI degrades before second publish cycle
+    network_info.rssi_to_return = -80;
+
+    for (int i = 6; i < 12; ++i)
+    {
+        clock.advanceMillis(10000);
+        clock.setNow(1700000000 + ((i + 1) * 10));
+        REQUIRE(controller.tick() == true);
+    }
+
+    CHECK(publisher.last_batch.rssi_dbm == -80);
+}
+
+TEST_CASE("Controller sets rssi_dbm to zero in batch when no network_info provided")
+{
+    MockSensor sensor;
+    MockPublisher publisher;
+    MockLogger logger;
+    MockClock clock;
+
+    clock.setMillis(0);
+    clock.setNow(1700000000);
+
+    std::vector<Sensor*> sensors{&sensor};
+
+    WeatherStationController controller(
+        "station_001",
+        10000,
+        60000,
+        sensors,
+        &publisher,
+        &logger,
+        &clock);
+
+    REQUIRE(controller.initialize() == true);
+
+    for (int i = 0; i < 6; ++i)
+    {
+        clock.advanceMillis(10000);
+        clock.setNow(1700000000 + ((i + 1) * 10));
+        REQUIRE(controller.tick() == true);
+    }
+
+    CHECK(publisher.on_publish_called == true);
+    CHECK(publisher.last_batch.rssi_dbm == 0);
 }

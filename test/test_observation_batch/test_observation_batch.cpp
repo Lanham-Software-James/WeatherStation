@@ -11,6 +11,7 @@ TEST_CASE("ObservationBatch initializes with default values")
 
     CHECK(batch.station_id == nullptr);
     CHECK(batch.sent_at == 0);
+    CHECK(batch.rssi_dbm == 0);
     CHECK(batch.samples.empty());
 }
 
@@ -142,6 +143,39 @@ TEST_CASE("ObservationBatch can be assigned")
     CHECK(target.samples[0].humidity_pct == 65.0f);
     CHECK(target.samples[0].pressure_hpa == 1008.8f);
     CHECK(target.samples[0].timestamp_utc == 1700000150);
+}
+
+TEST_CASE("ObservationBatch rssi_dbm can be assigned")
+{
+    ObservationBatch batch{};
+    batch.rssi_dbm = -78;
+
+    CHECK(batch.rssi_dbm == -78);
+}
+
+TEST_CASE("ObservationBatch rssi_dbm is preserved on copy")
+{
+    ObservationBatch original{};
+    original.station_id = "station_rssi";
+    original.sent_at = 1700000060;
+    original.rssi_dbm = -55;
+
+    ObservationBatch copy = original;
+
+    CHECK(copy.rssi_dbm == -55);
+}
+
+TEST_CASE("ObservationBatch rssi_dbm is preserved on assignment")
+{
+    ObservationBatch source{};
+    source.station_id = "station_rssi";
+    source.sent_at = 1700000060;
+    source.rssi_dbm = -90;
+
+    ObservationBatch target{};
+    target = source;
+
+    CHECK(target.rssi_dbm == -90);
 }
 
 TEST_CASE("ObservationBatch station_id can be set to null")

@@ -33,9 +33,10 @@ const char* ObservationSerializer::toJson(const ObservationBatch& batch)
     int written = std::snprintf(
         payload,
         sizeof(payload),
-        "{\"station_id\":\"%s\",\"sent_at\":\"%s\",\"samples\":[",
+        "{\"station_id\":\"%s\",\"sent_at\":\"%s\",\"rssi_dbm\":%d,\"samples\":[",
         batch.station_id != nullptr ? batch.station_id : "",
-        sent_at_buffer);
+        sent_at_buffer,
+        static_cast<int>(batch.rssi_dbm));
 
     if (written < 0 || written >= static_cast<int>(sizeof(payload)))
     {

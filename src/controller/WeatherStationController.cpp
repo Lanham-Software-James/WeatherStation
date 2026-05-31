@@ -9,13 +9,15 @@ WeatherStationController::WeatherStationController(
     const std::vector<Sensor*>& sensors,
     Publisher* publisher,
     Logger* logger,
-    Clock* clock)
+    Clock* clock,
+    NetworkInfo* network_info)
     : station_id_(station_id),
       sample_interval_ms_(sample_interval_ms),
       publish_interval_ms_(publish_interval_ms),
       sensors_(sensors),
       publisher_(publisher),
       logger_(logger),
+      network_info_(network_info),
       clock_(clock)
 {
 }
@@ -184,6 +186,7 @@ bool WeatherStationController::publishBatch()
     ObservationBatch batch{};
     batch.station_id = station_id_;
     batch.sent_at = clock_->now();
+    batch.rssi_dbm = (network_info_ != nullptr) ? network_info_->getRssi() : 0;
     batch.samples = buffered_samples_;
 
     if (!publisher_->publish(batch))
