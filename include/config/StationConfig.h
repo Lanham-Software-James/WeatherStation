@@ -30,5 +30,6 @@ struct StationConfig
     unsigned long sample_interval_ms{10000};
     unsigned long publish_interval_ms{60000};
     int led_pin{2};
+    int battery_adc_pin{34};
     std::vector<SensorConfig> sensors;
 };

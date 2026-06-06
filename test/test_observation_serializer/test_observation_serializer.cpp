@@ -268,6 +268,93 @@ TEST_CASE("ObservationSerializer places rssi_dbm before samples array")
     CHECK(rssi_pos < samples_pos);
 }
 
+TEST_CASE("ObservationSerializer serializes battery_voltage and battery_percent_estimate")
+{
+    ObservationBatch batch{};
+    batch.station_id = "station_battery";
+    batch.sent_at = 1700000060;
+    batch.battery_voltage = 3.82f;
+    batch.battery_percent_estimate = 62;
+    batch.samples.push_back(makeObservation("station_battery", 1700000000, 20.0f, 50.0f, 1013.0f));
+
+    const char* json = ObservationSerializer::toJson(batch);
+
+    REQUIRE(json != nullptr);
+    CHECK(std::strstr(json, "\"battery_voltage\":3.82") != nullptr);
+    CHECK(std::strstr(json, "\"battery_percent_estimate\":62") != nullptr);
+}
+
+TEST_CASE("ObservationSerializer serializes zero battery values when not set")
+{
+    ObservationBatch batch{};
+    batch.station_id = "station_battery_zero";
+    batch.sent_at = 1700000060;
+    batch.samples.push_back(makeObservation("station_battery_zero", 1700000000, 20.0f, 50.0f, 1013.0f));
+
+    const char* json = ObservationSerializer::toJson(batch);
+
+    REQUIRE(json != nullptr);
+    CHECK(std::strstr(json, "\"battery_voltage\":0.00") != nullptr);
+    CHECK(std::strstr(json, "\"battery_percent_estimate\":0") != nullptr);
+}
+
+TEST_CASE("ObservationSerializer serializes full battery charge values")
+{
+    ObservationBatch batch{};
+    batch.station_id = "station_battery_full";
+    batch.sent_at = 1700000060;
+    batch.battery_voltage = 4.20f;
+    batch.battery_percent_estimate = 100;
+    batch.samples.push_back(makeObservation("station_battery_full", 1700000000, 20.0f, 50.0f, 1013.0f));
+
+    const char* json = ObservationSerializer::toJson(batch);
+
+    REQUIRE(json != nullptr);
+    CHECK(std::strstr(json, "\"battery_voltage\":4.20") != nullptr);
+    CHECK(std::strstr(json, "\"battery_percent_estimate\":100") != nullptr);
+}
+
+TEST_CASE("ObservationSerializer places battery fields before samples array")
+{
+    ObservationBatch batch{};
+    batch.station_id = "station_battery_order";
+    batch.sent_at = 1700000060;
+    batch.battery_voltage = 3.70f;
+    batch.battery_percent_estimate = 40;
+    batch.samples.push_back(makeObservation("station_battery_order", 1700000000, 20.0f, 50.0f, 1013.0f));
+
+    const char* json = ObservationSerializer::toJson(batch);
+
+    REQUIRE(json != nullptr);
+
+    const std::string text = json;
+    const std::size_t voltage_pos  = text.find("\"battery_voltage\"");
+    const std::size_t percent_pos  = text.find("\"battery_percent_estimate\"");
+    const std::size_t samples_pos  = text.find("\"samples\"");
+
+    REQUIRE(voltage_pos != std::string::npos);
+    REQUIRE(percent_pos != std::string::npos);
+    REQUIRE(samples_pos != std::string::npos);
+    CHECK(voltage_pos < samples_pos);
+    CHECK(percent_pos < samples_pos);
+}
+
+TEST_CASE("ObservationSerializer includes battery keys in all expected JSON keys")
+{
+    ObservationBatch batch{};
+    batch.station_id = "station_keys";
+    batch.sent_at = 1700000060;
+    batch.battery_voltage = 3.85f;
+    batch.battery_percent_estimate = 60;
+    batch.samples.push_back(makeObservation("station_keys", 1700000000, 20.0f, 50.0f, 1013.0f));
+
+    const char* json = ObservationSerializer::toJson(batch);
+
+    REQUIRE(json != nullptr);
+    CHECK(std::strstr(json, "\"battery_voltage\"") != nullptr);
+    CHECK(std::strstr(json, "\"battery_percent_estimate\"") != nullptr);
+}
+
 TEST_CASE("ObservationSerializer serializes negative values correctly")
 {
     ObservationBatch batch{};

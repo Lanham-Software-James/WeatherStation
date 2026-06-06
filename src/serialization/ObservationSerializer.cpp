@@ -33,10 +33,12 @@ const char* ObservationSerializer::toJson(const ObservationBatch& batch)
     int written = std::snprintf(
         payload,
         sizeof(payload),
-        "{\"station_id\":\"%s\",\"sent_at\":\"%s\",\"rssi_dbm\":%d,\"samples\":[",
+        "{\"station_id\":\"%s\",\"sent_at\":\"%s\",\"rssi_dbm\":%d,\"battery_voltage\":%.2f,\"battery_percent_estimate\":%d,\"samples\":[",
         batch.station_id != nullptr ? batch.station_id : "",
         sent_at_buffer,
-        static_cast<int>(batch.rssi_dbm));
+        static_cast<int>(batch.rssi_dbm),
+        static_cast<double>(batch.battery_voltage),
+        batch.battery_percent_estimate);
 
     if (written < 0 || written >= static_cast<int>(sizeof(payload)))
     {

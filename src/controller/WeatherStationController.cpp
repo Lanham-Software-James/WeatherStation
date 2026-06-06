@@ -1,5 +1,6 @@
 #include <ctime>
 
+#include "battery/BatteryMonitor.h"
 #include "controller/WeatherStationController.h"
 
 WeatherStationController::WeatherStationController(
@@ -10,7 +11,8 @@ WeatherStationController::WeatherStationController(
     Publisher* publisher,
     Logger* logger,
     Clock* clock,
-    NetworkInfo* network_info)
+    NetworkInfo* network_info,
+    BatteryMonitor* battery_monitor)
     : station_id_(station_id),
       sample_interval_ms_(sample_interval_ms),
       publish_interval_ms_(publish_interval_ms),
@@ -18,6 +20,7 @@ WeatherStationController::WeatherStationController(
       publisher_(publisher),
       logger_(logger),
       network_info_(network_info),
+      battery_monitor_(battery_monitor),
       clock_(clock)
 {
 }
@@ -187,6 +190,12 @@ bool WeatherStationController::publishBatch()
     batch.station_id = station_id_;
     batch.sent_at = clock_->now();
     batch.rssi_dbm = (network_info_ != nullptr) ? network_info_->getRssi() : 0;
+    if (battery_monitor_ != nullptr)
+    {
+        const float v = battery_monitor_->getVoltage();
+        batch.battery_voltage = v;
+        batch.battery_percent_estimate = battery_monitor_->getPercentEstimate(v);
+    }
     batch.samples = buffered_samples_;
 
     if (!publisher_->publish(batch))

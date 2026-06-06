@@ -10,5 +10,7 @@ struct ObservationBatch
     const char* station_id{nullptr};
     std::time_t sent_at{0};
     std::int32_t rssi_dbm{0};
+    float battery_voltage{0.0f};
+    int battery_percent_estimate{0};
     std::vector<Observation> samples;
 };

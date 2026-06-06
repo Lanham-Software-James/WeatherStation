@@ -5,6 +5,7 @@
 #include "controller/WeatherStationController.h"
 #include "../test/mocks/MockClock.h"
 #include "../test/mocks/MockLogger.h"
+#include "../test/mocks/MockBatteryMonitor.h"
 #include "../test/mocks/MockNetworkInfo.h"
 #include "../test/mocks/MockPublisher.h"
 #include "../test/mocks/MockSensor.h"
@@ -919,4 +920,183 @@ TEST_CASE("Controller sets rssi_dbm to zero in batch when no network_info provid
 
     CHECK(publisher.on_publish_called == true);
     CHECK(publisher.last_batch.rssi_dbm == 0);
+}
+
+TEST_CASE("Controller populates battery fields in published batch when battery_monitor provided")
+{
+    MockSensor sensor;
+    MockPublisher publisher;
+    MockLogger logger;
+    MockClock clock;
+    MockBatteryMonitor battery_monitor;
+    battery_monitor.voltage_to_return = 3.82f;
+    battery_monitor.percent_to_return = 62;
+
+    clock.setMillis(0);
+    clock.setNow(1700000000);
+
+    std::vector<Sensor*> sensors{&sensor};
+
+    WeatherStationController controller(
+        "station_001",
+        10000,
+        60000,
+        sensors,
+        &publisher,
+        &logger,
+        &clock,
+        nullptr,
+        &battery_monitor);
+
+    REQUIRE(controller.initialize() == true);
+
+    for (int i = 0; i < 6; ++i)
+    {
+        clock.advanceMillis(10000);
+        clock.setNow(1700000000 + ((i + 1) * 10));
+        REQUIRE(controller.tick() == true);
+    }
+
+    CHECK(publisher.on_publish_called == true);
+    CHECK(publisher.last_batch.battery_voltage == doctest::Approx(3.82f));
+    CHECK(publisher.last_batch.battery_percent_estimate == 62);
+}
+
+TEST_CASE("Controller sets battery fields to zero in batch when no battery_monitor provided")
+{
+    MockSensor sensor;
+    MockPublisher publisher;
+    MockLogger logger;
+    MockClock clock;
+
+    clock.setMillis(0);
+    clock.setNow(1700000000);
+
+    std::vector<Sensor*> sensors{&sensor};
+
+    WeatherStationController controller(
+        "station_001",
+        10000,
+        60000,
+        sensors,
+        &publisher,
+        &logger,
+        &clock);
+
+    REQUIRE(controller.initialize() == true);
+
+    for (int i = 0; i < 6; ++i)
+    {
+        clock.advanceMillis(10000);
+        clock.setNow(1700000000 + ((i + 1) * 10));
+        REQUIRE(controller.tick() == true);
+    }
+
+    CHECK(publisher.on_publish_called == true);
+    CHECK(publisher.last_batch.battery_voltage == 0.0f);
+    CHECK(publisher.last_batch.battery_percent_estimate == 0);
+}
+
+TEST_CASE("Controller reads battery at publish time not at sample time")
+{
+    MockSensor sensor;
+    MockPublisher publisher;
+    MockLogger logger;
+    MockClock clock;
+    MockBatteryMonitor battery_monitor;
+    battery_monitor.voltage_to_return = 4.20f;
+    battery_monitor.percent_to_return = 100;
+
+    clock.setMillis(0);
+    clock.setNow(1700000000);
+
+    std::vector<Sensor*> sensors{&sensor};
+
+    WeatherStationController controller(
+        "station_001",
+        10000,
+        60000,
+        sensors,
+        &publisher,
+        &logger,
+        &clock,
+        nullptr,
+        &battery_monitor);
+
+    REQUIRE(controller.initialize() == true);
+
+    for (int i = 0; i < 3; ++i)
+    {
+        clock.advanceMillis(10000);
+        clock.setNow(1700000000 + ((i + 1) * 10));
+        REQUIRE(controller.tick() == true);
+    }
+
+    // Battery drains before publish
+    battery_monitor.voltage_to_return = 3.55f;
+    battery_monitor.percent_to_return = 20;
+
+    for (int i = 3; i < 6; ++i)
+    {
+        clock.advanceMillis(10000);
+        clock.setNow(1700000000 + ((i + 1) * 10));
+        REQUIRE(controller.tick() == true);
+    }
+
+    CHECK(publisher.on_publish_called == true);
+    CHECK(publisher.last_batch.battery_voltage == doctest::Approx(3.55f));
+    CHECK(publisher.last_batch.battery_percent_estimate == 20);
+}
+
+TEST_CASE("Controller reads battery fresh on each publish cycle")
+{
+    MockSensor sensor;
+    MockPublisher publisher;
+    MockLogger logger;
+    MockClock clock;
+    MockBatteryMonitor battery_monitor;
+    battery_monitor.voltage_to_return = 4.00f;
+    battery_monitor.percent_to_return = 80;
+
+    clock.setMillis(0);
+    clock.setNow(1700000000);
+
+    std::vector<Sensor*> sensors{&sensor};
+
+    WeatherStationController controller(
+        "station_001",
+        10000,
+        60000,
+        sensors,
+        &publisher,
+        &logger,
+        &clock,
+        nullptr,
+        &battery_monitor);
+
+    REQUIRE(controller.initialize() == true);
+
+    for (int i = 0; i < 6; ++i)
+    {
+        clock.advanceMillis(10000);
+        clock.setNow(1700000000 + ((i + 1) * 10));
+        REQUIRE(controller.tick() == true);
+    }
+
+    REQUIRE(publisher.on_publish_called == true);
+    CHECK(publisher.last_batch.battery_voltage == doctest::Approx(4.00f));
+    CHECK(publisher.last_batch.battery_percent_estimate == 80);
+
+    battery_monitor.voltage_to_return = 3.70f;
+    battery_monitor.percent_to_return = 40;
+
+    for (int i = 6; i < 12; ++i)
+    {
+        clock.advanceMillis(10000);
+        clock.setNow(1700000000 + ((i + 1) * 10));
+        REQUIRE(controller.tick() == true);
+    }
+
+    CHECK(publisher.last_batch.battery_voltage == doctest::Approx(3.70f));
+    CHECK(publisher.last_batch.battery_percent_estimate == 40);
 }
