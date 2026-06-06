@@ -12,6 +12,8 @@ TEST_CASE("ObservationBatch initializes with default values")
     CHECK(batch.station_id == nullptr);
     CHECK(batch.sent_at == 0);
     CHECK(batch.rssi_dbm == 0);
+    CHECK(batch.battery_voltage == 0.0f);
+    CHECK(batch.battery_percent_estimate == 0);
     CHECK(batch.samples.empty());
 }
 
@@ -163,6 +165,47 @@ TEST_CASE("ObservationBatch rssi_dbm is preserved on copy")
     ObservationBatch copy = original;
 
     CHECK(copy.rssi_dbm == -55);
+}
+
+TEST_CASE("ObservationBatch battery_voltage can be assigned")
+{
+    ObservationBatch batch{};
+    batch.battery_voltage = 3.82f;
+
+    CHECK(batch.battery_voltage == doctest::Approx(3.82f));
+}
+
+TEST_CASE("ObservationBatch battery_percent_estimate can be assigned")
+{
+    ObservationBatch batch{};
+    batch.battery_percent_estimate = 62;
+
+    CHECK(batch.battery_percent_estimate == 62);
+}
+
+TEST_CASE("ObservationBatch battery fields are preserved on copy")
+{
+    ObservationBatch original{};
+    original.battery_voltage = 4.00f;
+    original.battery_percent_estimate = 80;
+
+    ObservationBatch copy = original;
+
+    CHECK(copy.battery_voltage == doctest::Approx(4.00f));
+    CHECK(copy.battery_percent_estimate == 80);
+}
+
+TEST_CASE("ObservationBatch battery fields are preserved on assignment")
+{
+    ObservationBatch source{};
+    source.battery_voltage = 3.55f;
+    source.battery_percent_estimate = 20;
+
+    ObservationBatch target{};
+    target = source;
+
+    CHECK(target.battery_voltage == doctest::Approx(3.55f));
+    CHECK(target.battery_percent_estimate == 20);
 }
 
 TEST_CASE("ObservationBatch rssi_dbm is preserved on assignment")

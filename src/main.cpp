@@ -15,6 +15,7 @@
 #include "logging/adapters/SerialLogger.h"
 #include "time/adapters/ArduinoClock.h"
 #include "network/adapters/WiFiNetworkInfo.h"
+#include "battery/adapters/ADCBatteryMonitor.h"
 
 void initializeLEDs();
 void ledOff();
@@ -49,6 +50,7 @@ static AppConfig app_config;
 static std::vector<Sensor*> sensors;
 static MqttPublisher* publisher = nullptr;
 static WiFiNetworkInfo wifi_network_info;
+static ADCBatteryMonitor* battery_monitor = nullptr;
 
 WeatherStationController* controller = nullptr;
 static int prev_publish_count = 0;
@@ -252,6 +254,9 @@ void initializeHardware()
 {
     logger.println("Initializing hardware...");
 
+    delete battery_monitor;
+    battery_monitor = new ADCBatteryMonitor(app_config.station.battery_adc_pin);
+
     SensorFactory sensor_factory(
         [](const SensorConfig& config) -> Sensor* { return new SHT41Sensor(config); },
         [](const SensorConfig& config) -> Sensor* { return new BMP280Sensor(config); }
@@ -281,7 +286,8 @@ bool initializeController()
         publisher,
         &logger,
         &clock_instance,
-        &wifi_network_info
+        &wifi_network_info,
+        battery_monitor
     );
 
     if (!controller->initialize())

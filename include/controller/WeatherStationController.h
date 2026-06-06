@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "battery/BatteryMonitor.h"
 #include "logging/Logger.h"
 #include "network/NetworkInfo.h"
 #include "publisher/Publisher.h"
@@ -21,7 +22,8 @@ class WeatherStationController
             Publisher* publisher,
             Logger* logger,
             Clock* clock,
-            NetworkInfo* network_info = nullptr);
+            NetworkInfo* network_info = nullptr,
+            BatteryMonitor* battery_monitor = nullptr);
 
         bool initialize();
         bool tick();
@@ -42,6 +44,7 @@ class WeatherStationController
         Publisher* publisher_;
         Logger* logger_;
         NetworkInfo* network_info_;
+        BatteryMonitor* battery_monitor_;
 
         std::uint32_t sequence_number_{0};
 

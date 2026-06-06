@@ -29,6 +29,7 @@ static const char* CONFIG_JSON = R"({
     "sample_interval_ms": 10000,
     "publish_interval_ms": 10000,
     "led_pin": 4,
+    "battery_adc_pin": 35,
     "mqtt": {
         "broker_host": "192.168.0.50",
         "broker_port": 1883,
@@ -109,6 +110,40 @@ TEST_CASE("ConfigLoader led_pin overrides firmware default of 2")
 
     CHECK(config.station.led_pin != 2);
     CHECK(config.station.led_pin == 4);
+}
+
+TEST_CASE("ConfigLoader returns battery_adc_pin from JSON")
+{
+    StringFileSystem fs;
+    fs.add("config.json", CONFIG_JSON);
+
+    ConfigLoader loader(fs);
+    AppConfig config = loader.load();
+
+    CHECK(config.station.battery_adc_pin == 35);
+}
+
+TEST_CASE("ConfigLoader uses default battery_adc_pin when not specified")
+{
+    static const char* CONFIG_NO_ADC = R"({
+        "station_id": "station-001",
+        "sample_interval_ms": 10000,
+        "publish_interval_ms": 10000,
+        "mqtt": {
+            "broker_host": "192.168.0.50",
+            "broker_port": 1883,
+            "topic": "weather/station-001/telemetry"
+        },
+        "sensors": []
+    })";
+
+    StringFileSystem fs;
+    fs.add("config.json", CONFIG_NO_ADC);
+
+    ConfigLoader loader(fs);
+    AppConfig config = loader.load();
+
+    CHECK(config.station.battery_adc_pin == 34);
 }
 
 TEST_CASE("ConfigLoader uses default led_pin when not specified")
